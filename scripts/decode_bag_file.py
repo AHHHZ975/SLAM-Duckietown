@@ -48,29 +48,40 @@ print(f"Robot Name: {args.robot_name}")
 print(f"ROS Bag Location: {args.ros_bag_location}")
 print(f"Output Directory: {args.output_dir}")
 
+os.makedirs(args.output_dir)
+
 # load the bag
 bag = rosbag.Bag(args.ros_bag_location)
 
-count = 0
-time = []
-
 robot_name = args.robot_name
 ros_image_topic = f"/{robot_name}/camera_node/image/compressed"
+image_count = 0
+
 ros_left_wheel_topic = f"/{robot_name}/left_wheel_encoder_driver_node/tick"
 ros_right_wheel_topic = f"/{robot_name}/right_wheel_encoder_driver_node/tick"
 
+file = open(os.path.join(args.output_dir, "events.csv"), "w")
 
-for topic,msg, t in bag.read_messages(topics = [ros_image_topic]):
+for topic,msg,t in bag.read_messages(topics = [ros_image_topic, ros_left_wheel_topic, ros_right_wheel_topic]):
     
-    # Converting the messages related to the camera node existing in the bag file into the RGB image format that is compatible with OpenCV's format
-    cv_img = rgb_from_ros(msg)
-    print(msg)
-    print(msg.vel_left)
+    timestamp = t.to_nsec()
 
     # Storing the image frame somewhere in the hard disk
-    cv2.imwrite(os.path.join(args.output_dir, "frame%06i.png" %count), cv2.cvtColor(cv_img, cv2.COLOR_RGB2BGR))
-    count +=1
+
+    if topic == ros_image_topic:
+        # Save image
+        cv_img = rgb_from_ros(msg)
+        
+        image_name = "frame%06i.png" %image_count
+        cv2.imwrite(os.path.join(args.output_dir, image_name), cv2.cvtColor(cv_img, cv2.COLOR_RGB2BGR))
+        file.write(f"{timestamp},image,{image_name}\n")
+
+        image_count += 1
+    elif topic == ros_left_wheel_topic:
+        file.write(f"{timestamp},left_wheel,{msg.data}\n")
+    elif topic == ros_right_wheel_topic:
+        file.write(f"{timestamp},right_wheel,{msg.data}\n")
+
+file.close()
 
 bag.close()
-
-print("yolo")
