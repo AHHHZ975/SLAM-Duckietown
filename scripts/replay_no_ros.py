@@ -22,8 +22,6 @@ def parse_arguments():
 
 
 
-
-
 def replay(dir):
     file = open(os.path.join(dir, "events.csv"), "r")
 
@@ -44,12 +42,12 @@ def replay(dir):
 
     acc_pos = []
 
-
-
     DELTA_TIME = 2_000_000_000
 
-    for lines in file.readlines():
-        timestemp, event, data = lines.split(",")
+    lines = file.readlines()
+
+    for line in lines[500:750]:
+        timestemp, event, data = line.strip().split(",")
 
         if event == "left_wheel":
             data = int(data)
@@ -67,6 +65,12 @@ def replay(dir):
                 curr_rtick = data
             else:
                 curr_rtick = data
+        elif event == "image":
+            img_path = os.path.join(dir, data)
+            img = load_grayscale(img_path)
+            detected_image = detect_tags(img)
+            bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist()), detected_image))
+            visualize_bounding_boxes(img, bounding_boxes)
 
         timestemp = int(timestemp)
         if prev_timestemp == False:
@@ -159,6 +163,7 @@ def estimate_pose(
     # ---
     return x_curr, y_curr, theta_curr
 
+image_list = []
 def plot(vertices):
     import matplotlib.pyplot as plt
     from matplotlib.path import Path
@@ -191,8 +196,105 @@ def plot(vertices):
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
     plt.grid(True)
-    plt.show()
+    plt.plot()
+
+
+
+from dt_apriltags import Detector
+import cv2
+
+def load_grayscale(image_path):
+    grayscale_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    return grayscale_image.astype(np.uint8)
+
+
+def detect_tags(img):
+    return detector.detect(img)
+    
+def visualize_bounding_boxes(image, bounding_boxes):
+    """
+    Visualizes an image with bounding boxes overlaid.
+
+    :param image: NumPy array of the image.
+    :param bounding_boxes: List of bounding boxes, where each box is a tuple:
+                           (center, path).
+                           - center: (cx, cy) coordinates of the center.
+                           - path: List of (x, y) coordinates defining the polygon.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(image, cmap='gray')  # Display the image in grayscale if single-channel
+
+    for bbox in bounding_boxes:
+        center, path = bbox
+        # Plot the center
+        ax.plot(center[0], center[1], 'ro', label='Center' if 'Center' not in ax.get_legend_handles_labels()[1] else "")  # Red dot for the center
+
+        # Create the polygon
+        polygon = Polygon(path, closed=True, edgecolor='blue', facecolor='none', lw=2)
+        ax.add_patch(polygon)
+        
+        # Optionally, label the center
+        ax.text(center[0], center[1], 'Center', color='red', fontsize=9)
+
+    ax.set_title("Image with Bounding Boxes")
+    ax.axis("off")  # Turn off axis
+    plt.legend()
+
+    fig.canvas.draw()
+    frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    image_list.append(frame)
+    plt.close(fig)  # Close the figure to free memory
+
+
+def create_video_from_images(image_list, video_path, fps=10):
+    """
+    Create a video from a list of images.
+    
+    :param image_list: List of NumPy arrays (images).
+    :param video_path: Path to save the output video.
+    :param fps: Frames per second for the video.
+    """
+    height, width, _ = image_list[0].shape
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for MP4
+    video_writer = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+
+    for img in image_list:
+        video_writer.write(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))  # Convert RGB to BGR for OpenCV
+
+    video_writer.release()
+    print(f"Video saved to {video_path}")
 
 
 args = parse_arguments()
-replay(args.dir)
+
+def attempt(quad_sigma, decode_sharpening):
+    global image_list, detector
+
+    image_list = []
+    detector = Detector(searchpath=['apriltags'],
+                       families='tag36h11',
+                       nthreads=1,
+                       #max_hamming=max_hamming,
+                       quad_decimate=1.0,
+                       quad_sigma = quad_sigma,
+                       refine_edges = 1,
+                       decode_sharpening = decode_sharpening,
+                       debug=0)
+
+    replay(args.dir)
+    create_video_from_images(image_list, f"detected_april_tags_qs={quad_sigma}_ds={decode_sharpening}.mp4", 30)
+
+for quad_sigma in [0, 0.4, 0.8, 1.6, 3, 5]:
+    for decode_sharpening in [0, 0.25, 0.5, 1, 5, 10]:
+        #for max_hamming in [2, 4, 8]:
+        print("running... qs=", quad_sigma, "ds=", decode_sharpening)
+        attempt(quad_sigma, decode_sharpening)
+
+
+
+
