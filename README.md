@@ -1,5 +1,48 @@
 # SLAM-Duckietown
 
+## How to install
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
+```
+
+### 2. Install dependencies
+
+**(optional) Create a virtual environment**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Install the required packages**
+```bash
+pip install -r requirements.txt
+```
+
+**Install dt-apriltags https://github.com/duckietown/lib-dt-apriltags**
+On Ubuntu:
+```bash
+pip install dt-apriltags
+```
+
+On macOS (or to have the latest version):
+```bash
+chmod +x ./scripts/install_dt_apriltags
+./scripts/install_dt_apriltags
+pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the script
+```
+If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)
+
+### 3. Run the code. If you don't want to run through ros, you can run the following command:
+```bash
+python3 scripts/replay_no_ros.py -d ./output/<choose_dir>
+```
+
+
+
+
+
 Here, we briefly outline the three potential directions we discussed for our project. These ideas generally fall into two categories:
 ## Visual SLAM
 

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+ARCH=`uname`
+
+EXT_SO=".so" # Default on Linux
+if [ "$ARCH" = "Darwin" ]; then
+    EXT_SO=".dylib" # Mac OS
+fi
+
+# Clone repository and build it
+echo "%%% CLONING REPOSITORY %%%"
+git clone git@github.com:duckietown/lib-dt-apriltags.git
+cd lib-dt-apriltags
+git submodule init
+git submodule update
+
+set -e # Exit on error
+
+echo "%%% ACTIVATING TEMP ENVIRONNEMENT %%%"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install cython
+pip install setuptools numpy bdist-wheel-name wheel
+
+echo "%%% HACK .dylib into MANIFEST.in %%%"
+# this hack is needed to include the .dylib file in the wheel for macos
+echo "include dt_apriltags/libapriltag.dylib" >> MANIFEST.in
+
+echo "%%% INSTALLING THE APRILTAGS LIBRARY %%%"
+cd apriltags
+cmake .
+make
+SO_FILE=`find . | grep "libapriltag$EXT_SO"`
+cp $SO_FILE ../dt_apriltags/
+cd -
+
+# Build the python package
+echo "%%% BUILDING THE PACKAGE %%%"
+pip3 wheel ./ -w dist
+
+echo "%%% DEACTIVATING TEMP ENVIRONNEMENT %%%"
+deactivate
+
+echo "%%% NOW RUN INSTALL PACKAGE IN YOUR ENVIRONNEMENT %%%"
+echo "!!Make sure you are in an activated virtual environment!!"
+echo "Now run the following command in your environment:"
+echo ""
+echo " $ pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl"
+echo ""
+echo "If not working, wheel files should be at ./lib-dt-apriltags/dist/*. Check README.md"
