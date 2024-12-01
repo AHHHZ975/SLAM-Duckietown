@@ -1,6 +1,10 @@
 
 from typing import Tuple
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.path import Path
+import matplotlib.patches as patches
 
 import argparse
 import os
@@ -40,13 +44,15 @@ def replay(dir):
     resolution = 135
     prev_timestemp = False
 
-    acc_pos = []
+    acc_pos = [(0, 0)]
 
-    DELTA_TIME = 2_000_000_000
+    DELTA_TIME = 2_000_000_000 # 2 seconds
 
     lines = file.readlines()
 
-    for line in lines[500:750]:
+    i = 0
+    for line in lines[500:]:
+        print("replaying image", (i:=i+1))
         timestemp, event, data = line.strip().split(",")
 
         if event == "left_wheel":
@@ -97,9 +103,10 @@ def replay(dir):
                 delta_rphi
             )
             acc_pos.append((x_prev, y_prev))
+            plot_path(acc_pos)
 
         
-    plot(acc_pos)
+    #plot(acc_pos)
 
 def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> Tuple[float, float]:
     """
@@ -164,10 +171,7 @@ def estimate_pose(
     return x_curr, y_curr, theta_curr
 
 image_list = []
-def plot(vertices):
-    import matplotlib.pyplot as plt
-    from matplotlib.path import Path
-    import matplotlib.patches as patches
+def plot_path(vertices):
 
     #codes = [
     #    Path.MOVETO,  # Move to the starting point
@@ -176,27 +180,36 @@ def plot(vertices):
     ##    Path.LINETO,  # Draw another line
     #]
 
+    ax_path.clear()
     # Create the Path object
     path = Path(vertices)
+
+    max_x = max([x for x, y in vertices])
+    max_y = max([y for x, y in vertices])
+    min_x = min([x for x, y in vertices])
+    min_y = min([y for x, y in vertices])
 
     # Create a PathPatch
     patch = patches.PathPatch(path, facecolor='orange', edgecolor='black', lw=2)
 
     # Set up the figure and axis
-    fig, ax = plt.subplots()
-    ax.add_patch(patch)
+    ax_path.add_patch(patch)
 
     # Set limits and aspect ratio
-    ax.set_xlim(-1, 4)
-    ax.set_ylim(-1, 3)
-    ax.set_aspect('equal')
+    ax_path.set_xlim(min_x-1, max_x+1)
+    ax_path.set_ylim(min_y-1, max_y+1)
+    ax_path.set_aspect('equal')
+
+    #fig_path.title("2D Canvas Path")
 
     # Display the plot
-    plt.title("2D Canvas Path")
-    plt.xlabel("X-axis")
-    plt.ylabel("Y-axis")
-    plt.grid(True)
-    plt.plot()
+    fig_path.canvas.draw()
+    fig_path.canvas.flush_events()
+    #plt.title("2D Canvas Path")
+    #plt.xlabel("X-axis")
+    #plt.ylabel("Y-axis")
+    #plt.grid(True)
+    #plt.plot()
 
 
 
@@ -209,9 +222,27 @@ def load_grayscale(image_path):
     return grayscale_image.astype(np.uint8)
 
 
+detector = Detector(searchpath=['apriltags'],
+                   families='tag36h11',
+                   nthreads=1,
+                   #max_hamming=max_hamming,
+                   quad_decimate=1.0,
+                   quad_sigma = 0.0,
+                   refine_edges = 1,
+                   decode_sharpening = 0.25,
+                   debug=0)
+
+
 def detect_tags(img):
     return detector.detect(img)
     
+print("hey")
+plt.ion()
+plt.show()
+fig_img, ax_img = plt.subplots()
+fig_path, ax_path = plt.subplots()
+
+
 def visualize_bounding_boxes(image, bounding_boxes):
     """
     Visualizes an image with bounding boxes overlaid.
@@ -222,33 +253,32 @@ def visualize_bounding_boxes(image, bounding_boxes):
                            - center: (cx, cy) coordinates of the center.
                            - path: List of (x, y) coordinates defining the polygon.
     """
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Polygon
 
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.imshow(image, cmap='gray')  # Display the image in grayscale if single-channel
+    ax_img.clear()
+    ax_img.imshow(image, cmap='gray')  # Display the image in grayscale if single-channel
 
     for bbox in bounding_boxes:
         center, path = bbox
         # Plot the center
-        ax.plot(center[0], center[1], 'ro', label='Center' if 'Center' not in ax.get_legend_handles_labels()[1] else "")  # Red dot for the center
+        ax_img.plot(center[0], center[1], 'ro', label='Center' if 'Center' not in ax_path.get_legend_handles_labels()[1] else "")  # Red dot for the center
 
         # Create the polygon
         polygon = Polygon(path, closed=True, edgecolor='blue', facecolor='none', lw=2)
-        ax.add_patch(polygon)
+        ax_img.add_patch(polygon)
         
         # Optionally, label the center
-        ax.text(center[0], center[1], 'Center', color='red', fontsize=9)
+        ax_img.text(center[0], center[1], 'Center', color='red', fontsize=9)
 
-    ax.set_title("Image with Bounding Boxes")
-    ax.axis("off")  # Turn off axis
-    plt.legend()
+    ax_img.set_title("Image with Bounding Boxes")
+    ax_img.axis("off")  # Turn off axis
 
-    fig.canvas.draw()
-    frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    image_list.append(frame)
-    plt.close(fig)  # Close the figure to free memory
+    #fig.canvas.draw()
+    fig_img.canvas.draw()
+    fig_img.canvas.flush_events()
+    #frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    #frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    #image_list.append(frame)
+    #plt.close(fig)  # Close the figure to free memory
 
 
 def create_video_from_images(image_list, video_path, fps=10):
@@ -272,29 +302,31 @@ def create_video_from_images(image_list, video_path, fps=10):
 
 args = parse_arguments()
 
-def attempt(quad_sigma, decode_sharpening):
-    global image_list, detector
+replay(args.dir)
 
-    image_list = []
-    detector = Detector(searchpath=['apriltags'],
-                       families='tag36h11',
-                       nthreads=1,
-                       #max_hamming=max_hamming,
-                       quad_decimate=1.0,
-                       quad_sigma = quad_sigma,
-                       refine_edges = 1,
-                       decode_sharpening = decode_sharpening,
-                       debug=0)
-
-    replay(args.dir)
-    create_video_from_images(image_list, f"detected_april_tags_qs={quad_sigma}_ds={decode_sharpening}.mp4", 30)
-
-for quad_sigma in [0, 0.4, 0.8, 1.6, 3, 5]:
-    for decode_sharpening in [0, 0.25, 0.5, 1, 5, 10]:
-        #for max_hamming in [2, 4, 8]:
-        print("running... qs=", quad_sigma, "ds=", decode_sharpening)
-        attempt(quad_sigma, decode_sharpening)
-
+# def attempt(quad_sigma, decode_sharpening):
+#     global image_list, detector
+# 
+#     image_list = []
+#     detector = Detector(searchpath=['apriltags'],
+#                        families='tag36h11',
+#                        nthreads=1,
+#                        #max_hamming=max_hamming,
+#                        quad_decimate=1.0,
+#                        quad_sigma = quad_sigma,
+#                        refine_edges = 1,
+#                        decode_sharpening = decode_sharpening,
+#                        debug=0)
+# 
+#     replay(args.dir)
+#     create_video_from_images(image_list, f"detected_april_tags_qs={quad_sigma}_ds={decode_sharpening}.mp4", 30)
+# 
+# #for quad_sigma in [0, 0.4, 0.8, 1.6, 3, 5]:
+# #    for decode_sharpening in [0, 0.25, 0.5, 1, 5, 10]:
+# #        #for max_hamming in [2, 4, 8]:
+# #        print("running... qs=", quad_sigma, "ds=", decode_sharpening)
+# #        attempt(quad_sigma, decode_sharpening)
+# #
 
 
 
