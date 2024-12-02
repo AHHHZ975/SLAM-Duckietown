@@ -9,6 +9,8 @@ import matplotlib.patches as patches
 import argparse
 import os
 
+from collections import defaultdict
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process robot name, ROS bag location, and output directory.")
     
@@ -25,13 +27,28 @@ def parse_arguments():
     return args
 
 
+# def preload_images(dir, lines):
+#     for line in lines:
+#         timestemp, event, data = line.strip().split(",")
+#         if event == "image":
+#             img_path = os.path.join(dir, data)
+#             img = load_grayscale(img_path)
+#             detected_image = detect_tags(img)
+#             #breakpoint()
+#             #bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist()), detected_image))
+#             #visualize_bounding_boxes(img, bounding_boxes)
+#             #image_list.append(img)
+
+
+UNIQUE_COLOR=['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9',]
+def get_color(id):
+    return UNIQUE_COLOR[id%len(UNIQUE_COLOR)]
 
 def replay(dir):
     file = open(os.path.join(dir, "events.csv"), "r")
 
-    x_prev = 0
-    y_prev = 0
-    theta_prev = 0
+    mu_prev = np.array([.0, .0, .0]) # x, y, theta
+    Sigma_prev = np.eye(3) * 0.1
     R = 0.0318  # meters, default value of wheel radius
     baseline = 0.1  # meters, default value of baseline
 
@@ -46,13 +63,15 @@ def replay(dir):
 
     acc_pos = [(0, 0)]
 
-    DELTA_TIME = 2_000_000_000 # 2 seconds
+    DELTA_TIME = 500_000_000 # 2 seconds
 
     lines = file.readlines()
+    #imgs = preload_images(dir, lines[500:])
+    detections = []
+    tagss = {}
 
     i = 0
-    for line in lines[500:]:
-        print("replaying image", (i:=i+1))
+    for line in lines[1000:]:
         timestemp, event, data = line.strip().split(",")
 
         if event == "left_wheel":
@@ -75,8 +94,13 @@ def replay(dir):
             img_path = os.path.join(dir, data)
             img = load_grayscale(img_path)
             detected_image = detect_tags(img)
-            bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist()), detected_image))
+            detections.append( (timestemp, detected_image))
+            #print("detect_tags", (datetime.now() - before).total_seconds())
+            #pass
+            bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_image))
             visualize_bounding_boxes(img, bounding_boxes)
+            #print("\n".join(map(lambda x:f"{x.tag_id} : {x.pose_t}", detected_image)))
+            #breakpoint()
 
         timestemp = int(timestemp)
         if prev_timestemp == False:
@@ -85,30 +109,49 @@ def replay(dir):
         delta_timestemp = timestemp - prev_timestemp
 
         if delta_timestemp > DELTA_TIME:
-            prev_timestemp = timestemp
+            i += 1
+            print(">>>> i", i)
+            print("delta_timestemp", delta_timestemp)
+            prev_timestemp = prev_timestemp + DELTA_TIME
 
             delta_lphi = delta_phi(curr_ltick, prev_ltick, resolution)
             delta_rphi = delta_phi(curr_rtick, prev_rtick, resolution)
             prev_ltick = curr_ltick
             prev_rtick = curr_rtick
 
-
-            x_prev, y_prev, theta_prev = estimate_pose(
+            angular_displacement, linear_displacement = displacement(
                 R, 
                 baseline, 
-                x_prev, 
-                y_prev, 
-                theta_prev, 
                 delta_lphi, 
                 delta_rphi
             )
-            acc_pos.append((x_prev, y_prev))
-            plot_path(acc_pos)
+
+            print("angular_displacement", angular_displacement)
+            print("linear_displacement", linear_displacement)
+            print("mu_prev", mu_prev)
+            mu_prev, Sigma_prev, tags = estimate_pose2(
+                angular_displacement,
+                linear_displacement,
+                mu_prev,
+                Sigma_prev,
+                DELTA_TIME / 1_000_000_000,
+                detections
+            )
+            detections = []
+
+            tagss = tagss | tags
+
+            acc_pos.append((mu_prev[0], mu_prev[1]))
+            plot_path(acc_pos, Sigma_prev[0,0], Sigma_prev[1,1], tagss)
+            plt.pause(0.05)
+            #input("Press Enter to continue...")
 
         
     #plot(acc_pos)
+    while True:
+        plt.pause(0.05)
 
-def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> Tuple[float, float]:
+def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
     """
     Args:
         ticks: Current tick count from the encoders.
@@ -126,52 +169,110 @@ def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> Tuple[float, floa
     # ---
     return delta_phi
 
+TAG_TO_INDEX = {}
 
-def estimate_pose(
-    R: float,
-    baseline: float,
-    x_prev: float,
-    y_prev: float,
-    theta_prev: float,
-    delta_phi_left: float,
-    delta_phi_right: float,
+def estimate_pose2(
+    angular_displacement: float,
+    linear_displacement: float,
+    mu: np.ndarray,
+    Sigma: np.ndarray,
+    delta_t: float,
+    detections : list
 ) -> Tuple[float, float, float]:
 
-    """
-    Calculate the current Duckiebot pose using the dead-reckoning model.
+    print(len(detections))
 
-    Args:
-        R:                  radius of wheel (both wheels are assumed to have the same size) - this is fixed in simulation,
-                            and will be imported from your saved calibration for the real robot
-        baseline:           distance from wheel to wheel; 2L of the theory
-        x_prev:             previous x estimate - assume given
-        y_prev:             previous y estimate - assume given
-        theta_prev:         previous orientation estimate - assume given
-        delta_phi_left:     left wheel rotation (rad)
-        delta_phi_right:    right wheel rotation (rad)
+    detected_tags = defaultdict(list)
+    for detection in detections:
+        timestemp, detected_image = detection
 
-    Return:
-        x_curr:                  estimated x coordinate
-        y_curr:                  estimated y coordinate
-        theta_curr:              estimated heading
-    """
+        for tag in detected_image:
+            if tag.tag_id not in TAG_TO_INDEX:
+                TAG_TO_INDEX[tag.tag_id] = len(TAG_TO_INDEX)
+            detected_tags[TAG_TO_INDEX[tag.tag_id]].append([tag.pose_R, tag.pose_t, tag.pose_err])
 
-    # These are random values, replace with your own
+    # Average each detected tag (maybe not a good way to do it)
+    INV_TAG_TO_INDEX = {v: k for k, v in TAG_TO_INDEX.items()}
+    tags = {}
+    for tag_id, tag_data in detected_tags.items():
+        #R = np.mean([tag[0] for tag in tag_data], axis=0)
+        t = np.mean([tag[1] for tag in tag_data], axis=0)
+        err = np.mean([tag[2] for tag in tag_data], axis=0)
+        x, z = t[0], t[2]
+
+        # Here z looks forward and x looks to the right
+        #rel_x = np.cos(mu[2]) * x + np.sin(mu[2]) * z
+        #rel_y = np.sin(mu[2]) * x - np.cos(mu[2]) * z
+
+        print(mu[2])
+
+        rel_x = np.cos(mu[2]) * z + np.sin(mu[2]) * x
+        rel_y = np.sin(mu[2]) * z - np.cos(mu[2]) * x
+        
+        tags[tag_id] = [mu[0]+rel_x, mu[1]+rel_y, err, INV_TAG_TO_INDEX[tag_id]]
+
+        #print("tag_id", tag_id)
+        #print("R", R)
+        #print("t", t)
+        #print("err", err)
+
+    
+
+    #print("detected_tags", detected_tags.keys())
+
+
+    if angular_displacement == 0:
+        inter_vw = linear_displacement
+        mu[0] = mu[0] + inter_vw * np.cos(mu[2])
+        mu[1] = mu[1] + inter_vw * np.sin(mu[2])
+
+        # Update sigma
+        # Jacobian of the motion model
+        G = np.array([  
+           [1, 0, -inter_vw * np.sin(mu[2])],
+           [0, 1, inter_vw * np.cos(mu[2])],
+           [0, 0, 1]
+        ])
+    else:
+        inter_vw = linear_displacement / angular_displacement
+    
+        # Move the robot
+        mu[0] = mu[0] + inter_vw * (np.sin(mu[2] + angular_displacement) - np.sin(mu[2]))
+        mu[1] = mu[1] + inter_vw * (np.cos(mu[2]) - np.cos(mu[2] + angular_displacement))
+        mu[2] = mu[2] + angular_displacement
+
+        # Update sigma
+        # Jacobian of the motion model
+        G = np.array([  
+           [1, 0, -inter_vw * np.cos(mu[2]) + inter_vw * np.cos(mu[2] + angular_displacement)],
+           [0, 1, -inter_vw * np.sin(mu[2]) + inter_vw * np.sin(mu[2] + angular_displacement)],
+           [0, 0, 1]
+        ])
+
+    Sigma = G @ Sigma @ G.T + np.eye(3) * 0.05 * delta_t
+    return mu, Sigma, tags
+
+def displacement(
+    R: float,
+    baseline: float,
+    delta_phi_left: float,
+    delta_phi_right: float,
+) -> Tuple[float, float]:
 
     linear_displacement_wheel_right = R * delta_phi_right
     linear_displacement_wheel_left = R * delta_phi_left
-    linear_displacement_robot_origin = (linear_displacement_wheel_left + linear_displacement_wheel_right) / 2
+    linear_displacement = (linear_displacement_wheel_left + linear_displacement_wheel_right) / 2
 
-    angular_displacement_robot_origin = (linear_displacement_wheel_right - linear_displacement_wheel_left) / (baseline)
-    theta_curr = theta_prev + angular_displacement_robot_origin
+    angular_displacement = (linear_displacement_wheel_right - linear_displacement_wheel_left) / (baseline)
 
-    x_curr = x_prev + (linear_displacement_robot_origin*np.cos(theta_curr))
-    y_curr = y_prev + (linear_displacement_robot_origin*np.sin(theta_curr))
-    # ---
-    return x_curr, y_curr, theta_curr
+    return angular_displacement, linear_displacement
+    #x_curr = x_prev + (linear_displacement_robot_origin*np.cos(theta_curr))
+    #y_curr = y_prev + (linear_displacement_robot_origin*np.sin(theta_curr))
+    ## ---
+    #return x_curr, y_curr, theta_curr
 
 image_list = []
-def plot_path(vertices):
+def plot_path(vertices, sigma_x, sigma_y, tags):
 
     #codes = [
     #    Path.MOVETO,  # Move to the starting point
@@ -194,6 +295,15 @@ def plot_path(vertices):
 
     # Set up the figure and axis
     ax_path.add_patch(patch)
+
+    # Add variance ellipse
+    ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none')
+    ax_path.add_patch(ellipse)
+
+    # Add points for the tags
+    for tag_id, tag in tags.items():
+        ax_path.plot(tag[0], tag[1], 'ro', color=get_color(tag[3]))
+        ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=25)
 
     # Set limits and aspect ratio
     ax_path.set_xlim(min_x-1, max_x+1)
@@ -234,7 +344,7 @@ detector = Detector(searchpath=['apriltags'],
 
 
 def detect_tags(img):
-    return detector.detect(img)
+    return detector.detect(img, estimate_tag_pose=True, camera_params=[340, 336, 328, 257], tag_size=0.05)
     
 print("hey")
 plt.ion()
@@ -258,7 +368,7 @@ def visualize_bounding_boxes(image, bounding_boxes):
     ax_img.imshow(image, cmap='gray')  # Display the image in grayscale if single-channel
 
     for bbox in bounding_boxes:
-        center, path = bbox
+        center, path, tag_id, pose_t = bbox
         # Plot the center
         ax_img.plot(center[0], center[1], 'ro', label='Center' if 'Center' not in ax_path.get_legend_handles_labels()[1] else "")  # Red dot for the center
 
@@ -267,7 +377,11 @@ def visualize_bounding_boxes(image, bounding_boxes):
         ax_img.add_patch(polygon)
         
         # Optionally, label the center
-        ax_img.text(center[0], center[1], 'Center', color='red', fontsize=9)
+        ax_img.text(center[0], 
+                    center[1], 
+                    str(tag_id), #+ ":" + ",".join(map(lambda x: (f'{x[0]:.2}'), pose_t.tolist())), 
+                    color=get_color(tag_id), 
+                    fontsize=25)
 
     ax_img.set_title("Image with Bounding Boxes")
     ax_img.axis("off")  # Turn off axis
@@ -275,6 +389,7 @@ def visualize_bounding_boxes(image, bounding_boxes):
     #fig.canvas.draw()
     fig_img.canvas.draw()
     fig_img.canvas.flush_events()
+    plt.show()
     #frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
     #frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     #image_list.append(frame)
