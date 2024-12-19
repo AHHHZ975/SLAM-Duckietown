@@ -18,7 +18,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 # Method
 
-## Problem Statement
+## Problem statement
 
 - Input: A sequence of the Duckiebot’s inputs and measurements
 - Research Question: How to come up with an estimate of:
@@ -47,11 +47,41 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## The overview of pose estimation
 ![image](https://github.com/user-attachments/assets/267a8843-84e6-4040-98e1-c4dbe350c53b)
 
+## An overview of april tags detection steps [2]
+
+- Image preprocessing: grayscale conversion and adaptive thresholding
+- Segmentation: Union-find algorithm and clustering black and white pixels
+- Quadrilateral detection: Flood-fill algorithm for connected components
+- Decoding: Warping (homography), sampling for binary data, matching and centering
+
+![image](https://github.com/user-attachments/assets/01d8c9b2-e395-4689-b017-57c4b662e864)
+
+
+## April tags pose estimation
+
+- Frame definition:
+  - The center of the tag is chosen as the origin of the local coordinate system.
+  - The four corners of the tag have fixed 3D coordinates in this local frame. 
+
+- Extract the april tag position in the image using the tag Detection method (previous slide)
+
+- PnP solver: Calculates the transformation matrix that maps the 3D tags coordinates to the camera's frame of reference.
+
+
+![image](https://github.com/user-attachments/assets/3ea9317b-b1f3-482e-87e5-0723022f8180)
+
+![image](https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2)
+
+
+
+
+
+
 
 # Results
 
 ## Offline April Tags Detection and Odometry Estimation
-[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://youtu.be/-cfKAiPUpaM?si=U5oWqfdUiqFqq2Tp)
+[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
 ## Offline April Tags' Position Estimation
 [![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
@@ -130,4 +160,4 @@ To simplify the SLAM process, we could consider using non-visual data by relying
 
 # Reference
 [1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
-[2] 
+[2] [April Tags](https://april.eecs.umich.edu/software/apriltag)
