@@ -160,4 +160,5 @@ To simplify the SLAM process, we could consider using non-visual data by relying
 
 # Reference
 [1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
+
 [2] [April Tags](https://april.eecs.umich.edu/software/apriltag)
