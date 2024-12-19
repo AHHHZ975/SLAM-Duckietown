@@ -27,24 +27,30 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 ![image](https://github.com/user-attachments/assets/98828c24-0983-4d8f-ba1b-342c2c9280a6)
 
-## SLAM = Pose Estimation (Odometry) + Landmarks
-- Issue: motion estimation (odometry) drifts over time
-
+## SLAM = pose estimation (odometry) + landmarks
+- Issue: Motion estimation (odometry) drifts over time
+- A potential solution: Use external landmarks in the environment to reduce/avoid drift
 
 <table>
-    <tr>
+  <tr>
+    <th>Incorporating landmarks into the odometry problem</th>
     <th>Odometry after incorporating landmarks</th>
-    <th>Odometry before incorporating landmarks</th>
+    <th>Odometry before incorporating landmarks</th>    
   </tr>
   <tr>
+    <td><img src="https://github.com/user-attachments/assets/5c98c612-9521-4a33-a9c2-65a8eb2d849c" alt="Image 1" width="400"/></td>
     <td><img src="https://github.com/user-attachments/assets/2e70adc6-db47-4831-a033-783c146c19c0" alt="Image 1" width="400"/></td>
     <td><img src="https://github.com/user-attachments/assets/640b9af3-138f-4374-94cc-66182df776e1" alt="Image 2" width="400"/></td>
   </tr>
 </table>
 
-- 
+## The overview of pose estimation
+![image](https://github.com/user-attachments/assets/267a8843-84e6-4040-98e1-c4dbe350c53b)
+
 
 # Results
+
+
 
 ## How to install
 
