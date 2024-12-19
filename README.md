@@ -1,22 +1,57 @@
 # SLAM-Duckietown
 
-The official repository for the SLAM-Duckietown- a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
+The official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
 
-Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
+**Abstract**
+
+This project focuses on implementing an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform. Duckietown provides an educational and experimental environment for autonomous robotics, featuring small-scale robots (Duckiebots) navigating a miniature city. The objective is to estimate the Duckiebot's pose and the positions of static landmarks using its sensor inputs and motion data through wheel encoders. This work contributes to advancing localization and mapping capabilities in Duckietown. The project involves offline and online SLAM implementations, including odometry estimation, April tags detection, and pose estimation. The results demonstrate the effectiveness of the EKF-SLAM algorithm in improving the Duckiebot's localization and mapping performance.
+
+**Contributors**:
+
+- AmirHossein Zamani ()
+- Léonard Oest O’Leary ()
+- Kevin Lessard (kevin.lessard@umontreal.ca)
+
+
+# Table of Contents
+1. [Introduction](#introduction)
+3. [Related Work](#related-work)
+4. [Method](#method)
+5. [Experiments and Reproducibility](#experiments-and-reproducibility)
+6. [Results](#results)
+7. [Reference](#reference)
+8. [Annex](#annex)
+
 
 # Introduction
 
+## Context
+The Duckietown project is an open-source initiative to democratize robotics and AI education. It offers a miniature city where small autonomous vehicles (Duckiebots) can navigate roads, intersections, and traffic signs. Duckiebots, low-cost and open-source robots, use cameras, wheel encoders, IMUs, and Time-of-Flight sensors for navigation. Equipped with fisheye cameras, they detect April tags, fiducial markers used for localization and mapping, to estimate their pose and the positions of static landmarks when combined with wheel encoder measurements.
+
+
 ## Objective
+The goal of this project is to estimate:
+- The true pose – θ (x, y, θ) – of the Duckiebot over time.
+- The positions of static landmarks in the environment.
+
+By achieving these objectives, the project aims to improve the Duckiebot’s localization and mapping capabilities within the Duckietown environment.
+
 ![image](https://github.com/user-attachments/assets/eed5114c-5de5-49d3-a039-1061505add9e)
 
 ## The overview of the project
 ![image](https://github.com/user-attachments/assets/433160b0-0fb7-46d8-bc35-9bc2dcd8b9d9)
 
 
-# Motivation
+## Motivation
+Accurate localization and mapping are fundamental challenges in robotics, especially for low-cost, resource-constrained platforms like the Duckiebot. Implementing EKF-SLAM for Duckietown provides a practical framework for students and researchers to learn about simultaneous localization and mapping, while contributing to the broader goal of making robotics education accessible and impactful.
+
+
+# Related Work
 
 
 # Method
+
+
 
 ## Problem statement
 
@@ -74,21 +109,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 
 
-
-
-
-
-# Results
-
-## Offline April Tags Detection and Odometry Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
-[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
-
-## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
-[![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
-
-
-
-
+# Experiments and Reproducibility
 ## How to install
 
 ### 1. Clone the repository
@@ -129,13 +150,37 @@ python3 scripts/replay_no_ros.py -d ./output/<choose_dir>
 ```
 
 
+# Results
+
+## Offline April Tags Detection and Odometry Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
+[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+
+## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
+[![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
 
+# Reference
+
+[1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
+
+[2] [April Tags](https://april.eecs.umich.edu/software/apriltag)
+
+[3] [Duckietown](https://www.duckietown.org/)
+
+
+# Acknowledgement
+
+We would like to thank the instructors of the Autonomous Vehicles (Duckietown) course at University of Montreal for their guidance and support throughout the project.
+
+# Annex
+
+## Annex 1: First Project Proposal Ideas
 
 Here, we briefly outline the three potential directions we discussed for our project. These ideas generally fall into two categories:
-## Visual SLAM
+### Visual SLAM
 
-### Project Proposal 1: Lane-SLAM Adaptation for Duckiebot
+
+#### Project Proposal 1: Lane-SLAM Adaptation for Duckiebot
 Our first proposal involves understanding and re-implementing the [Lane-SLAM project](https://github.com/mandanasmi/lane-slam) while adapting it to the current hardware and software versions of the Duckiebot and Duckietown. Similar to the original "Lane-SLAM" project, we aim to decouple the SLAM task—meaning we would compute localization and mapping steps independently. In this approach:
 
 * **Mapping**: We start by detecting three types of lane markers (yellow segmented lines in the center, white sidelines, and red stop lines) from the camera image on the robot. We could use either a learning-based method or classical image-processing algorithms. We would then reconstruct these detected lines in 3D by computing the homography matrix between two consecutive image frames. Additionally, we can estimate camera motion through rotation and translation computations.
@@ -143,22 +188,15 @@ Our first proposal involves understanding and re-implementing the [Lane-SLAM pro
 * **Localization**: Using data from the wheel encoders, we can track the relative robot position from its starting point within Duckietown/Duckiematrix.
 Finally, by combining the robot’s position, 3D lane information, and camera motion data, we can visualize the environment as a map composed of lines and their respective colors. As a minor enhancement, we could incorporate IMU data (gyroscope and accelerometer) into odometry estimation by fusing the encoder and IMU data with Kalman or complementary filters to improve localization accuracy.
 
-### Project Proposal 2: Lightweight SLAM for Embedded Systems
+
+#### Project Proposal 2: Lightweight SLAM for Embedded Systems
 Our second idea involves identifying and re-implementing an existing lightweight SLAM algorithm designed for embedded systems with limited computational resources. For reference, [this project by NVIDIA](https://nvidia-ai-iot.github.io/jetson_isaac_ros_visual_slam_tutorial/index.html) is an example of what we have in mind. As with the previous proposal, we would integrate IMU data to enhance localization accuracy.
 
-## Non-Visual SLAM
-### Peroject Proposal 3:
+
+### Non-Visual SLAM
+#### Peroject Proposal 3:
 To simplify the SLAM process, we could consider using non-visual data by relying solely on a ToF (Time-of-Flight) sensor to map the environment, eliminating the need for complex image processing. Here’s our plan for this approach:
-
-
 
 * **Mapping**: By assuming the Duckietown/Duckiematrix environment has surrounding walls, we could gather useful ToF sensor data to detect these walls and create a map that includes walls and lanes. This would streamline the SLAM pipeline by reducing the complexity of camera-based lane detection.
 
 * **Localization**: As with the other proposals, we could use both IMU and encoder data to determine the robot’s position.
-
-
-
-# Reference
-[1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
-
-[2] [April Tags](https://april.eecs.umich.edu/software/apriltag)

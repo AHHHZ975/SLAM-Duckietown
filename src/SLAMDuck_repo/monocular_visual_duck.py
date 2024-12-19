@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-'''
+"""
 img = cv2.imread('/home/asha/SLAMDuck/images/undistorted_frame000170.png',0)
 
 # Initiate FAST object with default values
@@ -30,38 +30,37 @@ img3 = cv2.drawKeypoints(img, kp, color=(255,0,0))
 
 cv2.imwrite('fast_false.png',img3)
 
-'''
+"""
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-img1 = cv2.imread('/home/asha/SLAMDuck/images/undistorted_frame000168.png')
-gray1 = cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY)
+img1 = cv2.imread("/home/asha/SLAMDuck/images/undistorted_frame000168.png")
+gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
-corners1 = cv2.goodFeaturesToTrack(gray1,50,0.01,10)
+corners1 = cv2.goodFeaturesToTrack(gray1, 50, 0.01, 10)
 
-img2 = cv2.imread('/home/asha/SLAMDuck/images/undistorted_frame000169.png')
-gray2 = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+img2 = cv2.imread("/home/asha/SLAMDuck/images/undistorted_frame000169.png")
+gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-#corners2 = cv2.goodFeaturesToTrack(gray2,50,0.01,10)
+# corners2 = cv2.goodFeaturesToTrack(gray2,50,0.01,10)
 
 print(type(corners1))
 
-
-#nextPts is the calculated new positions of input features in the second image
-#each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise it is 0
-#winsize: size of the search window
-nextPts, status, error = cv2.calcOpticalFlowPyrLK(img1, img2, corners1, (21,21),2)
+# nextPts is the calculated new positions of input features in the second image
+# each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise it is 0
+# winsize: size of the search window
+nextPts, status, error = cv2.calcOpticalFlowPyrLK(img1, img2, corners1, (21, 21), 2)
 print(nextPts.shape)
 print(nextPts[0])
-#we must now get rid of points for which the KLT failed or are no longer in new
+# we must now get rid of points for which the KLT failed or are no longer in new
 
-#print(status)
-#print(flower_rider[0].shape)
-#print(corners2)
-#print(corners)
+# print(status)
+# print(flower_rider[0].shape)
+# print(corners2)
+# print(corners)
 
-'''
+"""
 
 
 
@@ -93,4 +92,4 @@ plt.imshow(img2)
 plt.show()
 
 
-'''
+"""

@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# Determine Platform and Library Extension
 ARCH=`uname`
 
 EXT_SO=".so" # Default on Linux
@@ -14,18 +15,22 @@ cd lib-dt-apriltags
 git submodule init
 git submodule update
 
+# Set error handling
 set -e # Exit on error
 
+# Create a temporary environment
 echo "%%% ACTIVATING TEMP ENVIRONNEMENT %%%"
 python3 -m venv .venv
 source .venv/bin/activate
 pip install cython
 pip install setuptools numpy bdist-wheel-name wheel
 
+# Include macOS .dylib in the Package
 echo "%%% HACK .dylib into MANIFEST.in %%%"
 # this hack is needed to include the .dylib file in the wheel for macos
 echo "include dt_apriltags/libapriltag.dylib" >> MANIFEST.in
 
+# Build the apriltags library
 echo "%%% INSTALLING THE APRILTAGS LIBRARY %%%"
 cd apriltags
 cmake .
@@ -38,9 +43,11 @@ cd -
 echo "%%% BUILDING THE PACKAGE %%%"
 pip3 wheel ./ -w dist
 
+# Deactivate the temporary environment
 echo "%%% DEACTIVATING TEMP ENVIRONNEMENT %%%"
 deactivate
 
+# Provide instructions for installation
 echo "%%% NOW RUN INSTALL PACKAGE IN YOUR ENVIRONNEMENT %%%"
 echo "!!Make sure you are in an activated virtual environment!!"
 echo "Now run the following command in your environment:"
