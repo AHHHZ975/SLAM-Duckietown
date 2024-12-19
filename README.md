@@ -1,5 +1,39 @@
 # SLAM-Duckietown
 
+The official repository for the SLAM-Duckietown- a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
+
+Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
+
+# Introduction
+
+## Objective
+![image](https://github.com/user-attachments/assets/eed5114c-5de5-49d3-a039-1061505add9e)
+
+## The overview of the project
+![image](https://github.com/user-attachments/assets/433160b0-0fb7-46d8-bc35-9bc2dcd8b9d9)
+
+
+# Motivation
+
+
+# Method
+
+## Problem Statement
+
+- Input: A sequence of the Duckiebot’s inputs and measurements
+- Research Question: How to come up with an estimate of:
+  - The true pose, (x, y, theta), of the Duckiebot at timesteps k1:k2
+  - The estimate of the true positions (x,y) of the N static landmarks. 
+
+![image](https://github.com/user-attachments/assets/98828c24-0983-4d8f-ba1b-342c2c9280a6)
+
+## SLAM = Pose Estimation (Odometry) + Landmarks
+- Issue: motion estimation (odometry) drifts over time
+  
+- 
+
+# Results
+
 ## How to install
 
 ### 1. Clone the repository
@@ -61,6 +95,14 @@ Our second idea involves identifying and re-implementing an existing lightweight
 ### Peroject Proposal 3:
 To simplify the SLAM process, we could consider using non-visual data by relying solely on a ToF (Time-of-Flight) sensor to map the environment, eliminating the need for complex image processing. Here’s our plan for this approach:
 
+
+
 * **Mapping**: By assuming the Duckietown/Duckiematrix environment has surrounding walls, we could gather useful ToF sensor data to detect these walls and create a map that includes walls and lanes. This would streamline the SLAM pipeline by reducing the complexity of camera-based lane detection.
 
 * **Localization**: As with the other proposals, we could use both IMU and encoder data to determine the robot’s position.
+
+
+
+# Reference
+[1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
+[2] 
