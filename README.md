@@ -29,7 +29,19 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 ## SLAM = Pose Estimation (Odometry) + Landmarks
 - Issue: motion estimation (odometry) drifts over time
-  
+
+
+<table>
+    <tr>
+    <th>Odometry after incorporating landmarks</th>
+    <th>Odometry before incorporating landmarks</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/2e70adc6-db47-4831-a033-783c146c19c0" alt="Image 1" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/640b9af3-138f-4374-94cc-66182df776e1" alt="Image 2" width="400"/></td>
+  </tr>
+</table>
+
 - 
 
 # Results
