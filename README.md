@@ -50,6 +50,13 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 # Results
 
+## Offline April Tags Detection and Odometry Estimation
+[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://youtu.be/-cfKAiPUpaM?si=U5oWqfdUiqFqq2Tp)
+
+## Offline April Tags' Position Estimation
+[![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+
+
 
 
 ## How to install
