@@ -76,9 +76,10 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ![image](https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2)
 
 
+## Extended Kalman Filter
 
 
-
+## Benchmarking using Vicon system
 
 
 # Results
@@ -89,7 +90,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
 [![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
-
+## The comparison with the ground truth data
 
 
 ## How to install
