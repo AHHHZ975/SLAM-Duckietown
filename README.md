@@ -47,6 +47,9 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## The overview of pose estimation
 ![image](https://github.com/user-attachments/assets/267a8843-84e6-4040-98e1-c4dbe350c53b)
 
+![image](https://github.com/user-attachments/assets/c470354a-5367-4cf4-9d7e-3c300337c97b)
+
+
 ## An overview of april tags detection steps [2]
 
 - Image preprocessing: grayscale conversion and adaptive thresholding
