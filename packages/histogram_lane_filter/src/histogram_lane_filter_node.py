@@ -22,6 +22,31 @@ import os
 import numpy as np
 from cv_bridge import CvBridge
 
+import matplotlib
+
+matplotlib.use("Agg")  # Important for headless mode
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon, Ellipse
+
+import cv2
+import os
+import numpy as np
+from cv_bridge import CvBridge
+
+from solution.lane_filter import LaneFilterHistogram
+from solution.ekf_slam import (
+    delta_phi,
+    displacement,
+    estimate_pose,
+    TAG_TO_INDEX,
+    get_color,
+)
+
+from dt_apriltags import Detector
+from collections import defaultdict
+
+from solution.ekf_slam import *
+
 
 class HistogramLaneFilterNode(DTROS):
     """Generates an estimate of the lane pose.
@@ -66,9 +91,31 @@ class HistogramLaneFilterNode(DTROS):
         self.mu = np.array([0.0, 0.0, 0.0])  # x, y, theta
         self.Sigma = np.eye(3) * 0.1
         self.detections = []
+
         self.prev_left_tick = None
         self.prev_right_tick = None
         self.prev_time = rospy.Time.now()
+
+        self.left_encoder_ticks = 0
+        self.right_encoder_ticks = 0
+        self.left_encoder_ticks_delta = 0
+        self.right_encoder_ticks_delta = 0
+
+        # Keep track of the robot trajectory
+        self.acc_pos = [(0.0, 0.0)]
+        self.tags = {}
+
+        # AprilTag Detector (if needed here or in ekf_slam)
+        self.detector = Detector(
+            searchpath=["apriltags"],
+            families="tag36h11",
+            nthreads=1,
+            quad_decimate=1.0,
+            quad_sigma=0.0,
+            refine_edges=1,
+            decode_sharpening=0.25,
+            debug=0,
+        )
 
         # back to original code
         self._filter = rospy.get_param("~lane_filter_histogram_configuration", None)
@@ -78,22 +125,42 @@ class HistogramLaneFilterNode(DTROS):
         # Create the filter
         self.filter = LaneFilterHistogram(**self._filter)
 
+        ## Create figures for visualization
+        self.fig_img, self.ax_img = plt.subplots()
+        self.fig_path, self.ax_path = plt.subplots()
+
+        # Publishers
+        self.pub_lane_pose = rospy.Publisher(
+            "~lane_pose", LanePose, queue_size=1, dt_topic_type=TopicType.PERCEPTION
+        )
+        self.pub_belief_img = rospy.Publisher(
+            "~belief_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        )
+        self.pub_segments_img = rospy.Publisher(
+            "~segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        )
+        self.pub_projected_segments_img = rospy.Publisher(
+            "~projected_segments_img",
+            Image,
+            queue_size=1,
+            dt_topic_type=TopicType.DEBUG,
+        )
+        self.pub_detection_img = rospy.Publisher("~detection_img", Image, queue_size=1)
+        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
+
         # Subscribers
         self.sub_image = rospy.Subscriber(
             "~image/compressed", CompressedImage, self.cbImage, queue_size=1
         )
-
         self.sub_camera_info = rospy.Subscriber(
             "~camera_info", CameraInfo, self.cb_camera_info, queue_size=1
         )
-
         self.sub_encoder_left = rospy.Subscriber(
             "~left_wheel_encoder_driver_node/tick",
             WheelEncoderStamped,
             self.cbProcessLeftEncoder,
             queue_size=1,
         )
-
         self.sub_encoder_right = rospy.Subscriber(
             "~right_wheel_encoder_driver_node/tick",
             WheelEncoderStamped,
@@ -101,30 +168,15 @@ class HistogramLaneFilterNode(DTROS):
             queue_size=1,
         )
 
-        # Publishers
-        self.pub_lane_pose = rospy.Publisher(
-            "~lane_pose", LanePose, queue_size=1, dt_topic_type=TopicType.PERCEPTION
-        )
-
-        self.pub_belief_img = rospy.Publisher(
-            "~belief_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
-        )
-
-        self.pub_segments_img = rospy.Publisher(
-            "~segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
-        )
-
-        self.pub_projected_segments_img = rospy.Publisher(
-            "~projected_segments_img",
-            Image,
-            queue_size=1,
-            dt_topic_type=TopicType.DEBUG,
-        )
-
         # Set up a timer for prediction (if we got encoder data) since that data can come very quickly
         rospy.Timer(rospy.Duration(1 / self._predict_freq), self.cbPredict)
 
         self.bridge = CvBridge()
+
+        # Create figure and axis for plotting the path
+        self.fig_path, self.ax_path = plt.subplots(figsize=(4, 4))
+        # Publisher for the path image
+        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
 
     def cb_camera_info(self, msg: CameraInfo):
         if not self.camera_info_received:
@@ -169,18 +221,53 @@ class HistogramLaneFilterNode(DTROS):
         self.last_encoder_stamp = right_encoder_msg.header.stamp
 
     def cbPredict(self, event):
-        # first let's check if we moved at all, if not abort
         if self.right_encoder_ticks_delta == 0 and self.left_encoder_ticks_delta == 0:
             return
 
+        # Predict step in lane filter
         self.filter.predict(
             self.left_encoder_ticks_delta, self.right_encoder_ticks_delta
         )
+
+        # Update ticks
         self.left_encoder_ticks += self.left_encoder_ticks_delta
         self.right_encoder_ticks += self.right_encoder_ticks_delta
+
+        # Compute angular and linear displacement
+        R = 0.0318  # Example wheel radius
+        baseline = 0.1  # Example baseline
+        resolution = self.filter.encoder_resolution
+
+        delta_lphi = delta_phi(self.left_encoder_ticks_delta, 0, resolution)
+        delta_rphi = delta_phi(self.right_encoder_ticks_delta, 0, resolution)
+
+        angular_disp, linear_disp = displacement(R, baseline, delta_lphi, delta_rphi)
+
+        # Reset deltas
         self.left_encoder_ticks_delta = 0
         self.right_encoder_ticks_delta = 0
-        
+
+        current_time = rospy.Time.now()
+        delta_t = (current_time - self.prev_time).to_sec()
+        self.prev_time = current_time
+
+        # Run estimate_pose with current detections
+        self.mu, self.Sigma, tags = estimate_pose(
+            angular_disp, linear_disp, self.mu, self.Sigma, delta_t, self.detections
+        )
+
+        # Clear detections after processing
+        self.detections = []
+
+        # Merge new tags into self.tags
+        for k, v in tags.items():
+            self.tags[k] = v
+
+        self.acc_pos.append((self.mu[0], self.mu[1]))
+
+        # Plot the path
+        self.plot_path(self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags)
+        self.publish_path_image()
 
     def cbImage(self, img_msg):
         """Callback to process the segments
@@ -199,28 +286,97 @@ class HistogramLaneFilterNode(DTROS):
             self.logerr(f"Could not decode image: {e}")
             return
         cropped_image = image[self.filter.crop_top :, :, :]
-        
+
         # After decoding the compressed image:
+        # Detect apriltags
         img_gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+
+        # Set your camera parameters as per your environment
         detected_tags = detector.detect(
-            img_gray, estimate_tag_pose=True,
-            camera_params=[fx, fy, cx, cy],  # Use your camera calibration parameters
-            tag_size=0.05
+            img_gray,
+            estimate_tag_pose=True,
+            camera_params=[308, 323, 315, 244],  # set params
+            tag_size=0.05,
         )
 
         if detected_tags:
             # Store detections along with a timestamp
             self.detections.append((rospy.Time.now().to_nsec(), detected_tags))
-        
-        # back to OG code
+
+        # Also do line detection and lane filter update as before
         lines = self.filter.detect_lines(cropped_image)
         segments = self.filter.lines_to_projected_segments(lines)
-
-        # update
         self.filter.update(segments)
+
+        # Visualize detections
+        bounding_boxes = [
+            (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t)
+            for x in detected_tags
+        ]
+
+        # Plot detections on the grayscale image
+        self.visualize_bounding_boxes(img_gray, bounding_boxes)
+        self.publish_detection_image()
 
         # publish
         self.publishEstimate(img_msg.header.stamp)
+
+    def visualize_bounding_boxes(self, image: np.ndarray, bounding_boxes: list):
+        self.ax_img.clear()
+        self.ax_img.imshow(image, cmap="gray")
+
+        for bbox in bounding_boxes:
+            center, path, tag_id, _ = bbox
+            self.ax_img.plot(center[0], center[1], "ro")
+            polygon = Polygon(
+                path, closed=True, edgecolor="blue", facecolor="none", lw=2
+            )
+            self.ax_img.add_patch(polygon)
+            self.ax_img.text(
+                center[0], center[1], str(tag_id), color=get_color(tag_id), fontsize=10
+            )
+
+        self.fig_img.canvas.draw()
+
+    def plot_path(self, vertices, sigma_x, sigma_y, tags):
+        self.ax_path.clear()
+        x_vals = [v[0] for v in vertices]
+        y_vals = [v[1] for v in vertices]
+        self.ax_path.plot(x_vals, y_vals, "-o", color="orange")
+
+        # Covariance ellipse
+        ellipse = Ellipse(
+            (vertices[-1][0], vertices[-1][1]),
+            width=sigma_x,
+            height=sigma_y,
+            edgecolor="red",
+            facecolor="none",
+        )
+        self.ax_path.add_patch(ellipse)
+
+        for t_id, t_pos in tags.items():
+            self.ax_path.plot(t_pos[0], t_pos[1], "x", color="blue")
+            self.ax_path.text(t_pos[0], t_pos[1], f"Tag:{t_id}")
+
+        self.ax_path.set_aspect("equal", adjustable="box")
+        self.ax_path.set_xlabel("X position")
+        self.ax_path.set_ylabel("Y position")
+        self.ax_path.set_title("Robot Trajectory and Detected Tags")
+        self.fig_path.canvas.draw()
+
+    def publish_detection_image(self):
+        w, h = self.fig_img.canvas.get_width_height()
+        buf = np.frombuffer(self.fig_img.canvas.tostring_rgb(), dtype=np.uint8)
+        buf = buf.reshape(h, w, 3)
+        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
+        self.pub_detection_img.publish(img_msg)
+
+    def publish_path_image(self):
+        w, h = self.fig_path.canvas.get_width_height()
+        buf = np.frombuffer(self.fig_path.canvas.tostring_rgb(), dtype=np.uint8)
+        buf = buf.reshape(h, w, 3)
+        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
+        self.pub_path_img.publish(img_msg)
 
     def publishEstimate(self, stamp):
 
@@ -291,6 +447,54 @@ class HistogramLaneFilterNode(DTROS):
             msg = f"Error in parsing calibration file {cali_file}:\n{e}"
             self.logerr(msg)
             rospy.signal_shutdown(msg)
+
+    def plot_path(self, vertices, sigma_x, sigma_y, tags):
+        # Clear the axis
+        self.ax_path.clear()
+
+        # Plot path
+        x_vals = [v[0] for v in vertices]
+        y_vals = [v[1] for v in vertices]
+        self.ax_path.plot(x_vals, y_vals, "-o", color="orange")
+
+        # Plot covariance ellipse at the last pose
+        from matplotlib.patches import Ellipse
+
+        ellipse = Ellipse(
+            (vertices[-1][0], vertices[-1][1]),
+            width=sigma_x,
+            height=sigma_y,
+            edgecolor="red",
+            facecolor="none",
+        )
+        self.ax_path.add_patch(ellipse)
+
+        # If you have tag detections, plot them as well
+        for t_id, t_pos in tags.items():
+            self.ax_path.plot(t_pos[0], t_pos[1], "x", color="blue")
+            self.ax_path.text(t_pos[0], t_pos[1], f"Tag:{t_id}")
+
+        # Set equal aspect and some nice bounds
+        self.ax_path.set_aspect("equal", adjustable="box")
+        self.ax_path.set_xlabel("X position")
+        self.ax_path.set_ylabel("Y position")
+        self.ax_path.set_title("Robot Trajectory and Detected Tags")
+
+        # Draw the figure in memory
+        self.fig_path.canvas.draw()
+
+    def publish_path_image(self):
+        # Convert the matplotlib figure to a numpy array
+        # The figure is rendered as RGBA
+        w, h = self.fig_path.canvas.get_width_height()
+        buf = np.frombuffer(self.fig_path.canvas.tostring_rgb(), dtype=np.uint8)
+        buf = buf.reshape(h, w, 3)
+
+        # Convert to ROS Image
+        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
+
+        # Publish
+        self.pub_path_img.publish(img_msg)
 
 
 if __name__ == "__main__":
