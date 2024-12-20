@@ -255,6 +255,8 @@ class HistogramLaneFilterNode(DTROS):
         self.mu, self.Sigma, tags = estimate_pose(
             angular_disp, linear_disp, self.mu, self.Sigma, delta_t, self.detections
         )
+        self.loginfo(f"EKF Pose: mu={self.mu}, Sigma={self.Sigma}")
+        self.loginfo(f"New tags from estimate_pose: {tags}")
 
         # Clear detections after processing
         self.detections = []
@@ -262,6 +264,7 @@ class HistogramLaneFilterNode(DTROS):
         # Merge new tags into self.tags
         for k, v in tags.items():
             self.tags[k] = v
+        self.loginfo(f"All known tags: {self.tags}")
 
         self.acc_pos.append((self.mu[0], self.mu[1]))
 
@@ -292,7 +295,7 @@ class HistogramLaneFilterNode(DTROS):
         img_gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
 
         # Set your camera parameters as per your environment
-        detected_tags = detector.detect(
+        detected_tags = self.detector.detect(
             img_gray,
             estimate_tag_pose=True,
             camera_params=[308, 323, 315, 244],  # set params
@@ -300,8 +303,10 @@ class HistogramLaneFilterNode(DTROS):
         )
 
         if detected_tags:
-            # Store detections along with a timestamp
+            self.loginfo(f"Detected {len(detected_tags)} tag(s)")
             self.detections.append((rospy.Time.now().to_nsec(), detected_tags))
+        else:
+            self.loginfo("No tags detected in current image.")
 
         # Also do line detection and lane filter update as before
         lines = self.filter.detect_lines(cropped_image)
@@ -337,32 +342,6 @@ class HistogramLaneFilterNode(DTROS):
             )
 
         self.fig_img.canvas.draw()
-
-    def plot_path(self, vertices, sigma_x, sigma_y, tags):
-        self.ax_path.clear()
-        x_vals = [v[0] for v in vertices]
-        y_vals = [v[1] for v in vertices]
-        self.ax_path.plot(x_vals, y_vals, "-o", color="orange")
-
-        # Covariance ellipse
-        ellipse = Ellipse(
-            (vertices[-1][0], vertices[-1][1]),
-            width=sigma_x,
-            height=sigma_y,
-            edgecolor="red",
-            facecolor="none",
-        )
-        self.ax_path.add_patch(ellipse)
-
-        for t_id, t_pos in tags.items():
-            self.ax_path.plot(t_pos[0], t_pos[1], "x", color="blue")
-            self.ax_path.text(t_pos[0], t_pos[1], f"Tag:{t_id}")
-
-        self.ax_path.set_aspect("equal", adjustable="box")
-        self.ax_path.set_xlabel("X position")
-        self.ax_path.set_ylabel("Y position")
-        self.ax_path.set_title("Robot Trajectory and Detected Tags")
-        self.fig_path.canvas.draw()
 
     def publish_detection_image(self):
         w, h = self.fig_img.canvas.get_width_height()
