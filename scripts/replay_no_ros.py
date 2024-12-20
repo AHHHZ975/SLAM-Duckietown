@@ -171,6 +171,8 @@ def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
 
 TAG_TO_INDEX = {}
 
+IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
+
 def estimate_pose2(
     angular_displacement: float,
     linear_displacement: float,
@@ -187,6 +189,9 @@ def estimate_pose2(
         timestemp, detected_image = detection
 
         for tag in detected_image:
+            if tag.tag_id in IGNORE_TAGS:
+                continue
+
             if tag.tag_id not in TAG_TO_INDEX:
                 TAG_TO_INDEX[tag.tag_id] = len(TAG_TO_INDEX)
             detected_tags[TAG_TO_INDEX[tag.tag_id]].append([tag.pose_R, tag.pose_t, tag.pose_err])
@@ -198,29 +203,33 @@ def estimate_pose2(
         #R = np.mean([tag[0] for tag in tag_data], axis=0)
         t = np.mean([tag[1] for tag in tag_data], axis=0)
         err = np.mean([tag[2] for tag in tag_data], axis=0)
-        x, z = t[0], t[2]
-
-        # Here z looks forward and x looks to the right
-        #rel_x = np.cos(mu[2]) * x + np.sin(mu[2]) * z
-        #rel_y = np.sin(mu[2]) * x - np.cos(mu[2]) * z
-
-        print(mu[2])
+        x, z = t[0][0], t[2][0]
 
         rel_x = np.cos(mu[2]) * z + np.sin(mu[2]) * x
         rel_y = np.sin(mu[2]) * z - np.cos(mu[2]) * x
         
         tags[tag_id] = [mu[0]+rel_x, mu[1]+rel_y, err, INV_TAG_TO_INDEX[tag_id]]
-
-        #print("tag_id", tag_id)
-        #print("R", R)
-        #print("t", t)
-        #print("err", err)
-
     
+    def set_tag(tag_id, x, y):
+        mu[3 + 2 * tag_id] = x
+        mu[3 + 2 * tag_id + 1] = y
 
-    #print("detected_tags", detected_tags.keys())
+    # Resize the mu array if needed
+    goal_size = 3 + 2 * len(TAG_TO_INDEX)
+    old_size = len(mu)
+    if len(mu) < goal_size:
+        mu.resize(goal_size, refcheck=False)
+        Sigma.resize((goal_size, goal_size), refcheck=False)
+        for i in range(old_size, goal_size):
+            Sigma[i, i] = 0.1
+            tag_no = (i - 3) // 2
+            set_tag(tag_no, tags[tag_no][0], tags[tag_no][1])
+
+    size = len(mu)
+    print("1 >>>>>>>>>>> mu", mu)
 
 
+    # Update the robot pose
     if angular_displacement == 0:
         inter_vw = linear_displacement
         mu[0] = mu[0] + inter_vw * np.cos(mu[2])
@@ -249,7 +258,51 @@ def estimate_pose2(
            [0, 0, 1]
         ])
 
-    Sigma = G @ Sigma @ G.T + np.eye(3) * 0.05 * delta_t
+
+    F = np.zeros((3,size))
+    F[0:3, 0:3] = np.eye(3)
+    
+    G_F = F.T @ G @ F
+
+    Sigma = G_F @ Sigma @ G_F.T
+    Sigma[0:3, 0:3] += np.eye(3) * 0.05 * delta_t
+    
+
+    # Update the tags
+
+    for tag_id, tag in tags.items():
+
+        F = np.zeros((5, size))
+        F[0:3, 0:3] = np.eye(3)
+        F[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
+
+        # Measurement
+        print(">>>> mu", mu)
+        delta_x = tag[0] - mu[0]
+        delta_y = tag[1] - mu[1]
+        q = delta_x**2 + delta_y**2
+        z = np.array([
+            [np.sqrt(q)],
+            [np.arctan2(delta_y, delta_x) - mu[2]]
+        ])
+
+
+        # Measurement model
+
+        
+        H = (np.array([
+            [-np.sqrt(q) * delta_x, -np.sqrt(q) * delta_y, .0, np.sqrt(q) * delta_x, np.sqrt(q) * delta_y],
+            [delta_y, -delta_x, -q, -delta_y, delta_x]
+        ], dtype=float) / q) @ F
+
+        K = Sigma @ H.T @ np.linalg.inv(H @ Sigma @ H.T +  0.1)
+        old_mu = mu
+        mu = (mu + (K@(np.array([[tag[0]], [tag[1]]]) - z)).T)[0]
+
+        Sigma = (np.eye(size) - K @ H) @ Sigma
+        
+        #print(f"tag {tag[3]}: {tag[0], tag[1]}")
+
     return mu, Sigma, tags
 
 def displacement(
@@ -442,6 +495,5 @@ replay(args.dir)
 # #        print("running... qs=", quad_sigma, "ds=", decode_sharpening)
 # #        attempt(quad_sigma, decode_sharpening)
 # #
-
 
 
