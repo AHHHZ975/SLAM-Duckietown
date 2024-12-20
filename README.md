@@ -105,7 +105,7 @@ Accurate localization and mapping are fundamental challenges in robotics, especi
 
 ![image](https://github.com/user-attachments/assets/3ea9317b-b1f3-482e-87e5-0723022f8180)
 
-![image](https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2)
+![image](`https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2`)
 
 
 
@@ -153,10 +153,10 @@ python3 scripts/replay_no_ros.py -d ./output/<choose_dir>
 # Results
 
 ## Offline April Tags Detection and Odometry Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
-[![Watch the video](readme_materials/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+[![Watch the video](assets/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
-[![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+[![Watch the video](assets/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
 
 # Reference

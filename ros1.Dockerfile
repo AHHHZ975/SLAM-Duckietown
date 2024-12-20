@@ -24,7 +24,7 @@ RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main"
 # Install rospy
 RUN apt-get install -y python3-rospy
 
-# Install additional Python packages using pip (if needed)
+# Install additional Python attempt_at_packages using pip (if needed)
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install numpy scipy
 
