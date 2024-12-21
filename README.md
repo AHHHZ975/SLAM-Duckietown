@@ -112,9 +112,10 @@ Accurate localization and mapping are fundamental challenges in robotics, especi
 # Experiments and Reproducibility
 ## How to install
 
-### 1. Clone the repository
+### 1. Clone the repository and cd
 ```bash
 git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
+cd SLAM-Duckietown
 ```
 
 ### 2. Install dependencies
@@ -138,8 +139,8 @@ pip install dt-apriltags
 
 On macOS (or to have the latest version):
 ```bash
-chmod +x ./scripts/install_dt_apriltags
-./scripts/install_dt_apriltags
+``chmod +x ./scripts/install_dt_apriltags
+``./scripts/install_dt_apriltags
 pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the script
 ```
 If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)

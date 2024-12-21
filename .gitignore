@@ -10,6 +10,7 @@ html/*
 # otherwise CI thinks index not clean
 *.resolved
 
+build/
 
 ### VirtualEnv ###
 # Virtualenv

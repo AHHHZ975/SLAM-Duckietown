@@ -22,8 +22,6 @@ import os
 import numpy as np
 from cv_bridge import CvBridge
 
-import matplotlib
-
 matplotlib.use("Agg")  # Important for headless mode
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon, Ellipse
@@ -129,44 +127,41 @@ class HistogramLaneFilterNode(DTROS):
         self.fig_img, self.ax_img = plt.subplots()
         self.fig_path, self.ax_path = plt.subplots()
 
-        # Publishers
-        self.pub_lane_pose = rospy.Publisher(
-            "~lane_pose", LanePose, queue_size=1, dt_topic_type=TopicType.PERCEPTION
-        )
-        self.pub_belief_img = rospy.Publisher(
-            "~belief_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
-        )
-        self.pub_segments_img = rospy.Publisher(
-            "~segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
-        )
-        self.pub_projected_segments_img = rospy.Publisher(
-            "~projected_segments_img",
-            Image,
-            queue_size=1,
-            dt_topic_type=TopicType.DEBUG,
-        )
-        self.pub_detection_img = rospy.Publisher("~detection_img", Image, queue_size=1)
-        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
-
         # Subscribers
         self.sub_image = rospy.Subscriber(
             "~image/compressed", CompressedImage, self.cbImage, queue_size=1
         )
+
         self.sub_camera_info = rospy.Subscriber(
             "~camera_info", CameraInfo, self.cb_camera_info, queue_size=1
         )
+
         self.sub_encoder_left = rospy.Subscriber(
-            "~left_wheel_encoder_driver_node/tick",
-            WheelEncoderStamped,
-            self.cbProcessLeftEncoder,
-            queue_size=1,
+            "~left_wheel_encoder_driver_node/tick", WheelEncoderStamped, self.cbProcessLeftEncoder, queue_size=1
         )
+
         self.sub_encoder_right = rospy.Subscriber(
-            "~right_wheel_encoder_driver_node/tick",
-            WheelEncoderStamped,
-            self.cbProcessRightEncoder,
-            queue_size=1,
+            "~right_wheel_encoder_driver_node/tick", WheelEncoderStamped, self.cbProcessRightEncoder, queue_size=1
         )
+
+        # Publishers
+        self.pub_lane_pose = rospy.Publisher(
+            "~lane_pose", LanePose, queue_size=1, dt_topic_type=TopicType.PERCEPTION
+        )
+
+        self.pub_belief_img = rospy.Publisher(
+            "~belief_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        )
+
+        self.pub_segments_img = rospy.Publisher(
+            "~segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        )
+
+        self.pub_projected_segments_img = rospy.Publisher(
+            "~projected_segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        )
+        self.pub_detection_img = rospy.Publisher("~detection_img", Image, queue_size=1)
+        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
 
         # Set up a timer for prediction (if we got encoder data) since that data can come very quickly
         rospy.Timer(rospy.Duration(1 / self._predict_freq), self.cbPredict)
@@ -216,7 +211,7 @@ class HistogramLaneFilterNode(DTROS):
             self.filter.encoder_resolution = right_encoder_msg.resolution
             self.filter.initialized = True
         self.right_encoder_ticks_delta = (
-            right_encoder_msg.data - self.right_encoder_ticks
+                right_encoder_msg.data - self.right_encoder_ticks
         )
         self.last_encoder_stamp = right_encoder_msg.header.stamp
 
@@ -288,7 +283,7 @@ class HistogramLaneFilterNode(DTROS):
         except ValueError as e:
             self.logerr(f"Could not decode image: {e}")
             return
-        cropped_image = image[self.filter.crop_top :, :, :]
+        cropped_image = image[self.filter.crop_top:, :, :]
 
         # After decoding the compressed image:
         # Detect apriltags
@@ -428,39 +423,49 @@ class HistogramLaneFilterNode(DTROS):
             rospy.signal_shutdown(msg)
 
     def plot_path(self, vertices, sigma_x, sigma_y, tags):
-        # Clear the axis
-        self.ax_path.clear()
+        # Instead of using Matplotlib:
+        # 1. Create a blank image
+        img_size = 500
+        img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
 
-        # Plot path
-        x_vals = [v[0] for v in vertices]
-        y_vals = [v[1] for v in vertices]
-        self.ax_path.plot(x_vals, y_vals, "-o", color="orange")
+        # Define a scaling factor and offset to convert from meters to pixels.
+        # For example:
+        scale = 50.0  # 1 meter = 50 pixels
+        offset_x = img_size // 2
+        offset_y = img_size // 2
 
-        # Plot covariance ellipse at the last pose
-        from matplotlib.patches import Ellipse
+        def to_img_coords(x, y):
+            # Convert world coordinates (x,y) to image coordinates
+            # Assuming x is horizontal and y is vertical, and we want (0,0) in the center
+            return int(offset_x + x * scale), int(offset_y - y * scale)
 
-        ellipse = Ellipse(
-            (vertices[-1][0], vertices[-1][1]),
-            width=sigma_x,
-            height=sigma_y,
-            edgecolor="red",
-            facecolor="none",
-        )
-        self.ax_path.add_patch(ellipse)
+        # Draw path (connect consecutive vertices)
+        for i in range(len(vertices) - 1):
+            x1, y1 = vertices[i]
+            x2, y2 = vertices[i + 1]
+            p1 = to_img_coords(x1, y1)
+            p2 = to_img_coords(x2, y2)
+            cv2.line(img, p1, p2, (0, 165, 255), 2)  # BGR for orange (0,165,255)
 
-        # If you have tag detections, plot them as well
+        # Draw covariance ellipse at the last point
+        # Ellipse parameters:
+        # center: last pose
+        # axes: need half-width/height (OpenCV ellipse axes are radius, not diameter)
+        cx, cy = to_img_coords(vertices[-1][0], vertices[-1][1])
+        axes = (int(sigma_x * scale / 2), int(sigma_y * scale / 2))
+        cv2.ellipse(img, (cx, cy), axes, 0, 0, 360, (0, 0, 255), 2)  # red ellipse
+
+        # Draw tags
         for t_id, t_pos in tags.items():
-            self.ax_path.plot(t_pos[0], t_pos[1], "x", color="blue")
-            self.ax_path.text(t_pos[0], t_pos[1], f"Tag:{t_id}")
+            tx, ty, _, tag_original_id = t_pos
+            pt = to_img_coords(tx, ty)
+            cv2.drawMarker(img, pt, (255, 0, 0), markerType=cv2.MARKER_CROSS, thickness=2)
+            cv2.putText(img, f"Tag:{tag_original_id}", (pt[0] + 5, pt[1] - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
 
-        # Set equal aspect and some nice bounds
-        self.ax_path.set_aspect("equal", adjustable="box")
-        self.ax_path.set_xlabel("X position")
-        self.ax_path.set_ylabel("Y position")
-        self.ax_path.set_title("Robot Trajectory and Detected Tags")
-
-        # Draw the figure in memory
-        self.fig_path.canvas.draw()
+        # Now convert img to ROS image and publish
+        img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+        self.pub_path_img.publish(img_msg)
 
     def publish_path_image(self):
         # Convert the matplotlib figure to a numpy array
