@@ -118,7 +118,7 @@ git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
 cd SLAM-Duckietown
 ```
 
-### 2. Install dependencies
+### 2. Install dependencies (Lower than python 3.13)
 
 **(optional) Create a virtual environment**
 ```bash

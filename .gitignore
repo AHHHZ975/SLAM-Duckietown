@@ -11,6 +11,7 @@ html/*
 *.resolved
 
 build/
+lib-dt-apriltags/
 
 ### VirtualEnv ###
 # Virtualenv
