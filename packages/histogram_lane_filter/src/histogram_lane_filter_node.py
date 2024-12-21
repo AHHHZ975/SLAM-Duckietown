@@ -119,10 +119,6 @@ class HistogramLaneFilterNode(DTROS):
         # Create the filter
         self.filter = LaneFilterHistogram(**self._filter)
 
-        ## Create figures for visualization
-        self.fig_img = None
-        self.fig_path = None
-
         # Subscribers
         self.sub_image = rospy.Subscriber(
             "~image/compressed", CompressedImage, self.cbImage, queue_size=1
@@ -173,9 +169,6 @@ class HistogramLaneFilterNode(DTROS):
 
         self.bridge = CvBridge()
 
-        # Publisher for the path image
-        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
-
     def cb_camera_info(self, msg: CameraInfo):
         if not self.camera_info_received:
             self.log("Received camera info message")
@@ -208,7 +201,6 @@ class HistogramLaneFilterNode(DTROS):
             self.filter.initialized = True
         self.left_encoder_ticks_delta = left_encoder_msg.data - self.left_encoder_ticks
         self.last_encoder_stamp = left_encoder_msg.header.stamp
-        print("yo")
 
     def cbProcessRightEncoder(self, right_encoder_msg):
         if not self.filter.initialized:
@@ -220,6 +212,7 @@ class HistogramLaneFilterNode(DTROS):
         self.last_encoder_stamp = right_encoder_msg.header.stamp
 
     def cbPredict(self, event):
+        print("yooo")
         if self.right_encoder_ticks_delta == 0 and self.left_encoder_ticks_delta == 0:
             return
 
@@ -268,7 +261,9 @@ class HistogramLaneFilterNode(DTROS):
         self.acc_pos.append((self.mu[0], self.mu[1]))
 
         # Plot the path
-        self.plot_path_opencv(self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags)
+        # self.plot_path_opencv(
+        #     self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags
+        # )
 
     def cbImage(self, img_msg):
         """Callback to process the segments
@@ -304,7 +299,8 @@ class HistogramLaneFilterNode(DTROS):
             self.loginfo(f"Detected {len(detected_tags)} tag(s)")
             self.detections.append((rospy.Time.now().to_nsec(), detected_tags))
         else:
-            self.loginfo("No tags detected in current image.")
+            pass
+            # self.loginfo("No tags detected in current image.")
 
         # Also do line detection and lane filter update as before
         lines = self.filter.detect_lines(cropped_image)
@@ -376,7 +372,7 @@ class HistogramLaneFilterNode(DTROS):
         lanePose.status = lanePose.NORMAL
 
         self.pub_lane_pose.publish(lanePose)
-        
+
         if self._debug:
             self.debugOutput()
 
@@ -438,94 +434,81 @@ class HistogramLaneFilterNode(DTROS):
             self.logerr(msg)
             rospy.signal_shutdown(msg)
 
-    def plot_path_opencv(vertices, sigma_x, sigma_y, tags):
-        # Create a blank white image
-        # Adjust size as needed.
-        img_size = 600
-        img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
+    # def plot_path_opencv(vertices, sigma_x, sigma_y, tags):
+    #     # Create a blank white image
+    #     # Adjust size as needed.
+    #     img_size = 600
+    #     img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
 
-        # Define a scaling factor and offset to place coordinates nicely on the image
-        # Adjust these based on the range of your coordinates
-        scale = 100.0  # For example, 1 unit in world = 100 pixels
-        offset_x = img_size // 2
-        offset_y = img_size // 2
+    #     # Define a scaling factor and offset to place coordinates nicely on the image
+    #     # Adjust these based on the range of your coordinates
+    #     scale = 100.0  # For example, 1 unit in world = 100 pixels
+    #     offset_x = img_size // 2
+    #     offset_y = img_size // 2
 
-        def to_img_coords(x, y):
-            # Transform world coordinates (x,y) into image coordinates (col, row)
-            # Assuming x to the right, y upwards
-            # This places (0,0) at the center of the image
-            return int(offset_x + x * scale), int(offset_y - y * scale)
+    #     def to_img_coords(x, y):
+    #         # Transform world coordinates (x,y) into image coordinates (col, row)
+    #         # Assuming x to the right, y upwards
+    #         # This places (0,0) at the center of the image
+    #         return int(offset_x + x * scale), int(offset_y - y * scale)
 
-        # Convert vertices to image coordinates
-        pts = np.array([to_img_coords(x, y) for x, y in vertices], dtype=np.int32)
+    #     # Convert vertices to image coordinates
+    #     pts = np.array([to_img_coords(x, y) for x, y in vertices], dtype=np.int32)
 
-        # Draw the polygon (path)
-        # Fill it with orange, then draw black outline
-        cv2.fillPoly(img, [pts], (0, 165, 255))  # BGR for orange: (0,165,255)
-        cv2.polylines(img, [pts], False, (0, 0, 0), 2)
+    #     # Draw the polygon (path)
+    #     # Fill it with orange, then draw black outline
+    #     cv2.fillPoly(img, [pts], (0, 165, 255))  # BGR for orange: (0,165,255)
+    #     cv2.polylines(img, [pts], False, (0, 0, 0), 2)
 
-        # Draw covariance ellipse
-        # OpenCV expects the axis sizes to be half of the full width/height.
-        ellipse_center = to_img_coords(vertices[-1][0], vertices[-1][1])
-        ellipse_axes = (int(sigma_x * scale / 2), int(sigma_y * scale / 2))
-        cv2.ellipse(
-            img, ellipse_center, ellipse_axes, 0, 0, 360, (0, 0, 255), 2
-        )  # Red ellipse
+    #     # Draw covariance ellipse
+    #     # OpenCV expects the axis sizes to be half of the full width/height.
+    #     ellipse_center = to_img_coords(vertices[-1][0], vertices[-1][1])
+    #     ellipse_axes = (int(sigma_x * scale / 2), int(sigma_y * scale / 2))
+    #     cv2.ellipse(
+    #         img, ellipse_center, ellipse_axes, 0, 0, 360, (0, 0, 255), 2
+    #     )  # Red ellipse
 
-        # Filter unique tags and average their positions if repeated
-        unique_tags = {}
-        for tag_id, tag_val in tags.items():
-            if tag_id not in unique_tags:
-                unique_tags[tag_id] = tag_val
-            else:
-                # Average the positions if duplicates
-                unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag_val[0]) / 2
-                unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag_val[1]) / 2
+    #     # Filter unique tags and average their positions if repeated
+    #     unique_tags = {}
+    #     for tag_id, tag_val in tags.items():
+    #         if tag_id not in unique_tags:
+    #             unique_tags[tag_id] = tag_val
+    #         else:
+    #             # Average the positions if duplicates
+    #             unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag_val[0]) / 2
+    #             unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag_val[1]) / 2
 
-        # Draw tags
-        for t_id, t_val in unique_tags.items():
-            tx, ty, err, original_id = t_val
-            pt = to_img_coords(tx, ty)
-            # Draw a small circle for the tag
-            cv2.circle(img, pt, 5, (255, 0, 0), -1)  # Blue circle
-            # Put text for the tag ID
-            cv2.putText(
-                img,
-                str(original_id),
-                (pt[0] + 5, pt[1] - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 0, 0),
-                1,
-                cv2.LINE_AA,
-            )
+    #     # Draw tags
+    #     for t_id, t_val in unique_tags.items():
+    #         tx, ty, err, original_id = t_val
+    #         pt = to_img_coords(tx, ty)
+    #         # Draw a small circle for the tag
+    #         cv2.circle(img, pt, 5, (255, 0, 0), -1)  # Blue circle
+    #         # Put text for the tag ID
+    #         cv2.putText(
+    #             img,
+    #             str(original_id),
+    #             (pt[0] + 5, pt[1] - 5),
+    #             cv2.FONT_HERSHEY_SIMPLEX,
+    #             0.5,
+    #             (255, 0, 0),
+    #             1,
+    #             cv2.LINE_AA,
+    #         )
 
-        # Auto-scale the display if desired by computing min/max coords
-        # (You can skip this if you've chosen a suitable scale and offset)
+    #     # Auto-scale the display if desired by computing min/max coords
+    #     # (You can skip this if you've chosen a suitable scale and offset)
 
-        # Now `img` holds the visualization.
-        # You can show it in a window (if running with display):
-        # cv2.imshow("Path", img)
-        # cv2.waitKey(1)
+    #     # Now `img` holds the visualization.
+    #     # You can show it in a window (if running with display):
+    #     # cv2.imshow("Path", img)
+    #     # cv2.waitKey(1)
 
-        # Or convert it to a ROS Image message if needed:
-        img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
-        self.pub_path_img.publish(img_msg)
+    #     # Or convert it to a ROS Image message if needed:
+    #     img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+    #     self.pub_path_img.publish(img_msg)
 
-        return img
-
-    def publish_path_image(self):
-        # Convert the matplotlib figure to a numpy array
-        # The figure is rendered as RGBA
-        w, h = self.fig_path.canvas.get_width_height()
-        buf = np.frombuffer(self.fig_path.canvas.tostring_rgb(), dtype=np.uint8)
-        buf = buf.reshape(h, w, 3)
-
-        # Convert to ROS Image
-        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
-
-        # Publish
-        self.pub_path_img.publish(img_msg)
+    #     return img
 
 
 if __name__ == "__main__":

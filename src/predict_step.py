@@ -141,51 +141,51 @@ def estimate_pose(
         )
 
     Sigma = G @ Sigma @ G.T + np.eye(3) * 0.05 * delta_t
-    # print("Detected tags:", detected_tags)
-    # print("Pose estimate:", mu, Sigma)
+    print("Detected tags:", detected_tags)
+    print("Pose estimate:", mu, Sigma)
     return mu, Sigma, tags
 
 
-def plot_path(
-    vertices: List[Tuple[float, float]], sigma_x: float, sigma_y: float, tags: dict
-):
-    """Plot the robot path and detected tags."""
-    ax_path.cla()  # Clear the current axis
-    path = Path(vertices)
-    patch = PathPatch(path, facecolor="orange", edgecolor="black", lw=2)
-    ax_path.add_patch(patch)
+# def plot_path(
+#     vertices: List[Tuple[float, float]], sigma_x: float, sigma_y: float, tags: dict
+# ):
+#     """Plot the robot path and detected tags."""
+#     ax_path.cla()  # Clear the current axis
+#     path = Path(vertices)
+#     patch = PathPatch(path, facecolor="orange", edgecolor="black", lw=2)
+#     ax_path.add_patch(patch)
 
-    # Covariance ellipse
-    ellipse = Ellipse(
-        (vertices[-1][0], vertices[-1][1]),
-        sigma_x,
-        sigma_y,
-        edgecolor="red",
-        facecolor="none",
-    )
-    ax_path.add_patch(ellipse)
+#     # Covariance ellipse
+#     ellipse = Ellipse(
+#         (vertices[-1][0], vertices[-1][1]),
+#         sigma_x,
+#         sigma_y,
+#         edgecolor="red",
+#         facecolor="none",
+#     )
+#     ax_path.add_patch(ellipse)
 
-    # Filter unique tags and plot
-    unique_tags = {}
-    for tag_id, tag in tags.items():
-        if tag_id not in unique_tags:
-            unique_tags[tag_id] = tag
-        else:
-            unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag[0]) / 2
-            unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag[1]) / 2
+#     # Filter unique tags and plot
+#     unique_tags = {}
+#     for tag_id, tag in tags.items():
+#         if tag_id not in unique_tags:
+#             unique_tags[tag_id] = tag
+#         else:
+#             unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag[0]) / 2
+#             unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag[1]) / 2
 
-    for tag_id, tag in unique_tags.items():
-        ax_path.plot(tag[0], tag[1], "o", color=get_color(tag[3]))
-        ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=10)
+#     for tag_id, tag in unique_tags.items():
+#         ax_path.plot(tag[0], tag[1], "o", color=get_color(tag[3]))
+#         ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=10)
 
-    x_coords = [x for x, y in vertices] + [tag[0] for tag in tags.values()]
-    y_coords = [y for x, y in vertices] + [tag[1] for tag in tags.values()]
+#     x_coords = [x for x, y in vertices] + [tag[0] for tag in tags.values()]
+#     y_coords = [y for x, y in vertices] + [tag[1] for tag in tags.values()]
 
-    ax_path.set_xlim(min(x_coords) - 1, max(x_coords) + 1)
-    ax_path.set_ylim(min(y_coords) - 1, max(y_coords) + 1)
-    ax_path.set_aspect("equal")
-    fig_path.canvas.draw()
-    fig_path.canvas.flush_events()
+#     ax_path.set_xlim(min(x_coords) - 1, max(x_coords) + 1)
+#     ax_path.set_ylim(min(y_coords) - 1, max(y_coords) + 1)
+#     ax_path.set_aspect("equal")
+#     fig_path.canvas.draw()
+#     fig_path.canvas.flush_events()
 
 
 def replay(directory: str):
@@ -216,7 +216,7 @@ def replay(directory: str):
             img = load_grayscale(img_path)
             detected_image = detect_tags(img)
             if not detected_image:
-                print("No tags detected in image.")
+                # print("No tags detected in image.")
                 continue
             detections.append((timestemp, detected_image))
             bounding_boxes = [

@@ -86,6 +86,7 @@ def estimate_pose(
 ) -> Tuple[np.ndarray, np.ndarray, dict]:
     """Estimate robot pose and update belief."""
     detected_tags = defaultdict(list)
+    print('posay')
     for timestemp, detected_image in detections:
         for tag in detected_image:
             if tag.tag_id not in TAG_TO_INDEX:
@@ -137,8 +138,8 @@ def estimate_pose(
         )
 
     Sigma = G @ Sigma @ G.T + np.eye(3) * 0.05 * delta_t
-    # print("Detected tags:", detected_tags)
-    # print("Pose estimate:", mu, Sigma)
+    print("Detected tags:", detected_tags)
+    print("Pose estimate:", mu, Sigma)
     return mu, Sigma, tags
 
 
