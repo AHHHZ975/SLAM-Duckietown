@@ -47,6 +47,9 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## The overview of pose estimation
 ![image](https://github.com/user-attachments/assets/267a8843-84e6-4040-98e1-c4dbe350c53b)
 
+![image](https://github.com/user-attachments/assets/c470354a-5367-4cf4-9d7e-3c300337c97b)
+
+
 ## An overview of april tags detection steps [2]
 
 - Image preprocessing: grayscale conversion and adaptive thresholding
@@ -73,9 +76,10 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ![image](https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2)
 
 
+## Extended Kalman Filter
 
 
-
+## Benchmarking using Vicon system
 
 
 # Results
@@ -86,7 +90,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
 [![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
-
+## The comparison with the ground truth data
 
 
 ## How to install
