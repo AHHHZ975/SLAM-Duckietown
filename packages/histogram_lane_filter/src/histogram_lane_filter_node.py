@@ -250,7 +250,7 @@ class HistogramLaneFilterNode(DTROS):
         delta_t = (current_time - self.prev_time).to_sec()
         self.prev_time = current_time
 
-        # Run estimate_pose with current detections
+        # Run EKF-SLAM estimate_pose with current detections
         self.mu, self.Sigma, tags = estimate_pose(
             angular_disp, linear_disp, self.mu, self.Sigma, delta_t, self.detections
         )
@@ -269,7 +269,6 @@ class HistogramLaneFilterNode(DTROS):
 
         # Plot the path
         self.plot_path_opencv(self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags)
-        self.publish_path_image()
 
     def cbImage(self, img_msg):
         """Callback to process the segments
