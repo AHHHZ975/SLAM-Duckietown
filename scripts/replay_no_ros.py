@@ -229,15 +229,15 @@ def estimate_pose2(
         motion_model_covariance.resize((new_state_vector_size, new_state_vector_size), refcheck=False)
         
         # Initialize the new elements in the motion model's mean and covariance matrices
-        for i in range(old_state_vector_size, new_state_vector_size):            
+        for i in range(old_state_vector_size, new_state_vector_size): 
+            print("foobar")    
             motion_model_covariance[i, i] = 0.1
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags[tag_no][0]
             motion_model_mean[3 + 2 * tag_no + 1] = tags[tag_no][1]
 
 
-    size = len(motion_model_mean)
-    print("1 >>>>>>>>>>> mu", motion_model_mean)
+    size = len(motion_model_mean)    
     
     ###########################################################################################################
     ########################################### EKF Prediction Step ###########################################
@@ -264,21 +264,23 @@ def estimate_pose2(
            [0, 0, 1]
         ])
 
-    # Process noise covariance
-    R_t = np.diag([0.1**2, 0.1**2, 0.1**2])  # Adjust noise values as needed
+    # Noise covariance matrix for the motion model
+    R = np.diag([0.1**2, 0.1**2, 0.1**2])
 
     # State mapping matrix
     F = np.zeros((3,size))
-    F[0:3, 0:3] = np.eye(3)    
+    F[0:3, 0:3] = np.eye(3)
 
     # Covariance update
     G_F = F.T @ G @ F
-    motion_model_covariance = G_F @ motion_model_covariance @ G_F.T + F.T @ R_t @ F
-    
+    motion_model_covariance = G_F @ motion_model_covariance @ G_F.T + F.T @ R @ F
+
     ###########################################################################################################
     ########################################### EKF Update Step ###############################################
-    ###########################################################################################################
-    for tag_id, tag_pose in tags.items():
+    ###########################################################################################################    
+    for tag_id, tag_pose in tags.items():        
+        # Line 6 of the EKF-SLAM algorithm
+        Q = np.diag([0.1**2, 0.1**2]) # Noise covariance matrix for the measurement model
 
         # Line 12 of the EKF-SLAM algorithm      
         delta_x = tag_pose[0] - motion_model_mean[0]
@@ -294,7 +296,11 @@ def estimate_pose2(
             [np.arctan2(delta_y, delta_x) - motion_model_mean[2]]
         ])
         z_diff = z_actual - z_estimation
+        # print(z_actual[0], z_estimation[0])
+        # print(z_actual[1], z_estimation[1])
         z_diff[1] = np.arctan2(np.sin(z_diff[1]), np.cos(z_diff[1]))  # Normalize the angle in the observation difference to fall within the range [−π,π]
+
+        print(z_diff[1])
 
         # Line 15 of the EKF-SLAM algorithm
         F = np.zeros((5, size))
@@ -308,18 +314,14 @@ def estimate_pose2(
         ], dtype=float) / q) @ F
         
         # Line 17 of the EKF-SLAM algorithm
-        # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.
-        R = np.diag([0.1**2, 0.1**2])
-        K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + R)
-
+        # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
+        K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
         
         # Line 18 of the EKF-SLAM algorithm
-        motion_model_mean = motion_model_mean + (K @ z_diff).T[0]
+        motion_model_mean += (K @ z_diff).T[0]
 
         # Line 19 of the EKF-SLAM algorithm
-        motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
-        
-        #print(f"tag {tag[3]}: {tag[0], tag[1]}")
+        motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance        
 
     return motion_model_mean, motion_model_covariance, tags
 
@@ -413,7 +415,6 @@ detector = Detector(searchpath=['apriltags'],
                    decode_sharpening = 0.25,
                    debug=0)
 
-
 def detect_tags(img):
     return detector.detect(img, estimate_tag_pose=True, camera_params=[340, 336, 328, 257], tag_size=0.05)
     
@@ -489,29 +490,3 @@ def create_video_from_images(image_list, video_path, fps=10):
 args = parse_arguments()
 
 replay(args.dir)
-
-# def attempt(quad_sigma, decode_sharpening):
-#     global image_list, detector
-# 
-#     image_list = []
-#     detector = Detector(searchpath=['apriltags'],
-#                        families='tag36h11',
-#                        nthreads=1,
-#                        #max_hamming=max_hamming,
-#                        quad_decimate=1.0,
-#                        quad_sigma = quad_sigma,
-#                        refine_edges = 1,
-#                        decode_sharpening = decode_sharpening,
-#                        debug=0)
-# 
-#     replay(args.dir)
-#     create_video_from_images(image_list, f"detected_april_tags_qs={quad_sigma}_ds={decode_sharpening}.mp4", 30)
-# 
-# #for quad_sigma in [0, 0.4, 0.8, 1.6, 3, 5]:
-# #    for decode_sharpening in [0, 0.25, 0.5, 1, 5, 10]:
-# #        #for max_hamming in [2, 4, 8]:
-# #        print("running... qs=", quad_sigma, "ds=", decode_sharpening)
-# #        attempt(quad_sigma, decode_sharpening)
-# #
-
-
