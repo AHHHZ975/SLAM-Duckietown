@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import rospy
-#from duckietown import DTROS
-#from std_msgs.msg import String
-#from sensor_msgs.msg import CameraInfo
-#from duckietown_msgs.msg import Pose2DStamped, WheelsCmdStamped
 import rosbag
 import cv2
-#from cv_bridge import CvBridge
 from duckietown_utils import rgb_from_ros
 
 import argparse
@@ -83,5 +77,5 @@ for topic,msg,t in bag.read_messages(topics = [ros_image_topic, ros_left_wheel_t
         file.write(f"{timestamp},right_wheel,{msg.data}\n")
 
 file.close()
-
 bag.close()
+

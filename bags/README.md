@@ -1,3 +1,8 @@
+# Bags
+
+This file contains all the bags we used for testing.
+
+
 ## Files quackgpt_manual_easy, quackgpt_joystick_easy quackgpt_joystick_hard
 
 These files have a bag file with a corresponding capture file from a vicon capture system. 
