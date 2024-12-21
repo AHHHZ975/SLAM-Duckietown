@@ -7,3 +7,7 @@ We need to take this into consideration when running the tests. Here is some add
 - **quackgpt_manual_easy**: This one was taken by moving the duckiebot manually (by hand). It should be the easiest capture.
 - **quackgpt_joystick_easy**: This one was taken by moving the duckiebot with the joystick, in a hopefully not so jittery way.
 - **quackgpt_joystick_hard**: This one is a failed attempt at moving the robot across. It's a hard challenge as sometimes the apriltags get out of view and the duckiebot doesn't move predictably.
+
+Here is a map with the April tags numbers: 
+
+[quackgpt_april_tags_number.png]()!
