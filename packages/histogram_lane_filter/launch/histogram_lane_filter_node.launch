@@ -18,14 +18,14 @@
         </node>
     </group>
   	 <!-- Lane controller -->
-     <remap from="lane_controller_node/lane_pose" to="histogram_lane_filter_node/lane_pose"/>
+     <!-- <remap from="lane_controller_node/lane_pose" to="histogram_lane_filter_node/lane_pose"/>
      <remap from="lane_controller_node/wheels_cmd" to="wheels_driver_node/wheels_cmd" />
      <remap from="lane_controller_node/car_cmd" to="joy_mapper_node/car_cmd"/>
      <remap from="wheels_driver_node/radius_limit" to="lane_controller_node/radius_limit" />
      <include file="$(find lane_control)/launch/lane_controller_node.launch">
           <arg name="veh" value="$(arg veh)"/>
           <arg name="param_file_name" value="default"/>
-     </include>
+     </include> -->
 
     <!-- Publications -->
 

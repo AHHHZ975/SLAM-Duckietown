@@ -1,11 +1,5 @@
 from typing import Tuple, List
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon, Ellipse, PathPatch
-from matplotlib import patches
-from matplotlib.path import Path
 import cv2
 import argparse
 import os
@@ -255,7 +249,6 @@ def replay(directory: str):
 
             acc_pos.append((mu_prev[0], mu_prev[1]))
             plot_path(acc_pos, Sigma_prev[0, 0], Sigma_prev[1, 1], tagss)
-            plt.pause(0.05)
 
 
 def visualize_bounding_boxes(image: np.ndarray, bounding_boxes: List[Tuple]):
@@ -285,11 +278,6 @@ detector = Detector(
     decode_sharpening=0.25,
     debug=0,
 )
-
-# Matplotlib setup
-plt.ion()
-fig_img, ax_img = plt.subplots()
-fig_path, ax_path = plt.subplots()
 
 if __name__ == "__main__":
     args = parse_arguments()
