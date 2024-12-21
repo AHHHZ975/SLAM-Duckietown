@@ -1,3 +1,4 @@
+# This file is a utility to replay recorded events from the bag file without the need of ROS dependencies.
 
 from typing import Tuple
 import numpy as np
@@ -11,6 +12,7 @@ import os
 
 from collections import defaultdict
 
+# Command line utility
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process robot name, ROS bag location, and output directory.")
     
@@ -31,6 +33,8 @@ UNIQUE_COLOR=['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', 
 def get_color(id):
     return UNIQUE_COLOR[id%len(UNIQUE_COLOR)]
 
+
+# Main replay function
 def replay(dir):
     file = open(os.path.join(dir, "events.csv"), "r")
 
@@ -53,7 +57,6 @@ def replay(dir):
     DELTA_TIME = 500_000_000 # 2 seconds
 
     lines = file.readlines()
-    #imgs = preload_images(dir, lines[500:])
     timestamp_detectedTags_pair_list = []
     tagss = {}
 
@@ -77,6 +80,7 @@ def replay(dir):
                 curr_rtick = data
             else:
                 curr_rtick = data
+
         elif event == "image":
             img_path = os.path.join(dir, data)
             img = load_grayscale(img_path)
