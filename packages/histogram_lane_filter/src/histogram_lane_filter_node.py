@@ -120,8 +120,8 @@ class HistogramLaneFilterNode(DTROS):
         self.filter = LaneFilterHistogram(**self._filter)
 
         ## Create figures for visualization
-        self.fig_img, self.ax_img = plt.subplots()
-        self.fig_path, self.ax_path = plt.subplots()
+        self.fig_img = None
+        self.fig_path = None
 
         # Subscribers
         self.sub_image = rospy.Subscriber(
@@ -133,11 +133,17 @@ class HistogramLaneFilterNode(DTROS):
         )
 
         self.sub_encoder_left = rospy.Subscriber(
-            "~left_wheel_encoder_driver_node/tick", WheelEncoderStamped, self.cbProcessLeftEncoder, queue_size=1
+            "~left_wheel_encoder_driver_node/tick",
+            WheelEncoderStamped,
+            self.cbProcessLeftEncoder,
+            queue_size=1,
         )
 
         self.sub_encoder_right = rospy.Subscriber(
-            "~right_wheel_encoder_driver_node/tick", WheelEncoderStamped, self.cbProcessRightEncoder, queue_size=1
+            "~right_wheel_encoder_driver_node/tick",
+            WheelEncoderStamped,
+            self.cbProcessRightEncoder,
+            queue_size=1,
         )
 
         # Publishers
@@ -154,7 +160,10 @@ class HistogramLaneFilterNode(DTROS):
         )
 
         self.pub_projected_segments_img = rospy.Publisher(
-            "~projected_segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+            "~projected_segments_img",
+            Image,
+            queue_size=1,
+            dt_topic_type=TopicType.DEBUG,
         )
         self.pub_detection_img = rospy.Publisher("~detection_img", Image, queue_size=1)
         self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
@@ -206,7 +215,7 @@ class HistogramLaneFilterNode(DTROS):
             self.filter.encoder_resolution = right_encoder_msg.resolution
             self.filter.initialized = True
         self.right_encoder_ticks_delta = (
-                right_encoder_msg.data - self.right_encoder_ticks
+            right_encoder_msg.data - self.right_encoder_ticks
         )
         self.last_encoder_stamp = right_encoder_msg.header.stamp
 
@@ -259,7 +268,7 @@ class HistogramLaneFilterNode(DTROS):
         self.acc_pos.append((self.mu[0], self.mu[1]))
 
         # Plot the path
-        self.plot_path(self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags)
+        self.plot_path_opencv(self.acc_pos, self.Sigma[0, 0], self.Sigma[1, 1], self.tags)
         self.publish_path_image()
 
     def cbImage(self, img_msg):
@@ -278,7 +287,7 @@ class HistogramLaneFilterNode(DTROS):
         except ValueError as e:
             self.logerr(f"Could not decode image: {e}")
             return
-        cropped_image = image[self.filter.crop_top:, :, :]
+        cropped_image = image[self.filter.crop_top :, :, :]
 
         # After decoding the compressed image:
         # Detect apriltags
@@ -310,45 +319,53 @@ class HistogramLaneFilterNode(DTROS):
         ]
 
         # Plot detections on the grayscale image
-        self.visualize_bounding_boxes(img_gray, bounding_boxes)
-        self.publish_detection_image()
+        self.visualize_bounding_boxes_opencv(img_gray, bounding_boxes)
 
         # publish
         self.publishEstimate(img_msg.header.stamp)
 
-    def visualize_bounding_boxes(self, image: np.ndarray, bounding_boxes: list):
-        self.ax_img.clear()
-        self.ax_img.imshow(image, cmap="gray")
+    def visualize_bounding_boxes_opencv(self, image: np.ndarray, bounding_boxes: list):
+        # `image` should be a 2D (grayscale) or 3D (BGR) NumPy array
+        # If `image` is grayscale, convert to BGR so we can draw colored lines and text
+        if len(image.shape) == 2:
+            img_bgr = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        else:
+            img_bgr = image.copy()
 
         for bbox in bounding_boxes:
             center, path, tag_id, _ = bbox
-            self.ax_img.plot(center[0], center[1], "ro")
-            polygon = Polygon(
-                path, closed=True, edgecolor="blue", facecolor="none", lw=2
-            )
-            self.ax_img.add_patch(polygon)
-            self.ax_img.text(
-                center[0], center[1], str(tag_id), color=get_color(tag_id), fontsize=10
+            # center and path are in (x, y) coordinates
+            # Convert to int if needed
+            cx, cy = int(center[0]), int(center[1])
+
+            # Draw center as a red circle
+            cv2.circle(img_bgr, (cx, cy), 3, (0, 0, 255), -1)  # BGR: red
+
+            # Draw polygon (bounding box)
+            # path is a list of (x,y) coordinates.
+            pts = np.array(path, dtype=np.int32)
+            cv2.polylines(
+                img_bgr, [pts], isClosed=True, color=(255, 0, 0), thickness=2
+            )  # BGR: blue
+
+            # Put the tag_id text near the center
+            cv2.putText(
+                img_bgr,
+                str(tag_id),
+                (cx + 5, cy - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 0),
+                1,
+                cv2.LINE_AA,
             )
 
-        self.fig_img.canvas.draw()
-
-    def publish_detection_image(self):
-        w, h = self.fig_img.canvas.get_width_height()
-        buf = np.frombuffer(self.fig_img.canvas.tostring_rgb(), dtype=np.uint8)
-        buf = buf.reshape(h, w, 3)
-        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
+        # Now you have img_bgr with bounding boxes drawn
+        # If you need to publish this as a ROS Image, use cv_bridge
+        img_msg = self.bridge.cv2_to_imgmsg(img_bgr, encoding="bgr8")
         self.pub_detection_img.publish(img_msg)
 
-    def publish_path_image(self):
-        w, h = self.fig_path.canvas.get_width_height()
-        buf = np.frombuffer(self.fig_path.canvas.tostring_rgb(), dtype=np.uint8)
-        buf = buf.reshape(h, w, 3)
-        img_msg = self.bridge.cv2_to_imgmsg(buf, encoding="rgb8")
-        self.pub_path_img.publish(img_msg)
-
     def publishEstimate(self, stamp):
-
         [d_max, phi_max] = self.filter.getEstimate()
 
         # build lane pose message to send
@@ -360,19 +377,24 @@ class HistogramLaneFilterNode(DTROS):
         lanePose.status = lanePose.NORMAL
 
         self.pub_lane_pose.publish(lanePose)
+        
         if self._debug:
             self.debugOutput()
 
     def debugOutput(self):
         """Creates and publishes debug messages"""
 
-        # Create belief image and publish it
+        # Belief image
         belief_img = self.bridge.cv2_to_imgmsg(
             np.array(255 * self.filter.belief).astype("uint8"), "mono8"
         )
         self.pub_belief_img.publish(belief_img)
+
+        # Segments image
         segments_img = self.bridge.cv2_to_imgmsg(self.filter.image_w_dets)
         self.pub_segments_img.publish(segments_img)
+
+        # Projected segments image
         projected_segments_img = self.bridge.cv2_to_imgmsg(
             cv2.cvtColor(self.filter.image_w_segs_rgb, cv2.COLOR_BGR2RGB)
         )
@@ -421,7 +443,7 @@ class HistogramLaneFilterNode(DTROS):
         # Create a blank white image
         # Adjust size as needed.
         img_size = 600
-        img = np.ones((img_size, img_size, 3), dtype=np.uint8)*255
+        img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
 
         # Define a scaling factor and offset to place coordinates nicely on the image
         # Adjust these based on the range of your coordinates
@@ -440,14 +462,16 @@ class HistogramLaneFilterNode(DTROS):
 
         # Draw the polygon (path)
         # Fill it with orange, then draw black outline
-        cv2.fillPoly(img, [pts], (0,165,255))  # BGR for orange: (0,165,255)
-        cv2.polylines(img, [pts], False, (0,0,0), 2)
+        cv2.fillPoly(img, [pts], (0, 165, 255))  # BGR for orange: (0,165,255)
+        cv2.polylines(img, [pts], False, (0, 0, 0), 2)
 
         # Draw covariance ellipse
         # OpenCV expects the axis sizes to be half of the full width/height.
         ellipse_center = to_img_coords(vertices[-1][0], vertices[-1][1])
-        ellipse_axes = (int(sigma_x*scale/2), int(sigma_y*scale/2))
-        cv2.ellipse(img, ellipse_center, ellipse_axes, 0, 0, 360, (0,0,255), 2)  # Red ellipse
+        ellipse_axes = (int(sigma_x * scale / 2), int(sigma_y * scale / 2))
+        cv2.ellipse(
+            img, ellipse_center, ellipse_axes, 0, 0, 360, (0, 0, 255), 2
+        )  # Red ellipse
 
         # Filter unique tags and average their positions if repeated
         unique_tags = {}
@@ -456,18 +480,26 @@ class HistogramLaneFilterNode(DTROS):
                 unique_tags[tag_id] = tag_val
             else:
                 # Average the positions if duplicates
-                unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag_val[0])/2
-                unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag_val[1])/2
+                unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag_val[0]) / 2
+                unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag_val[1]) / 2
 
         # Draw tags
         for t_id, t_val in unique_tags.items():
             tx, ty, err, original_id = t_val
             pt = to_img_coords(tx, ty)
             # Draw a small circle for the tag
-            cv2.circle(img, pt, 5, (255,0,0), -1)  # Blue circle
+            cv2.circle(img, pt, 5, (255, 0, 0), -1)  # Blue circle
             # Put text for the tag ID
-            cv2.putText(img, str(original_id), (pt[0]+5, pt[1]-5), cv2.FONT_HERSHEY_SIMPLEX, 
-                        0.5, (255,0,0), 1, cv2.LINE_AA)
+            cv2.putText(
+                img,
+                str(original_id),
+                (pt[0] + 5, pt[1] - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 0),
+                1,
+                cv2.LINE_AA,
+            )
 
         # Auto-scale the display if desired by computing min/max coords
         # (You can skip this if you've chosen a suitable scale and offset)
