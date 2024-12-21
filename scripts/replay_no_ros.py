@@ -245,6 +245,11 @@ def estimate_pose2(
     if abs(angular_displacement) <= 1e-6: # Linear movement        
         motion_model_mean[0] = motion_model_mean[0] + linear_displacement * np.cos(motion_model_mean[2])
         motion_model_mean[1] = motion_model_mean[1] + linear_displacement * np.sin(motion_model_mean[2])
+        G = np.array([  
+           [1, 0, -linear_displacement * np.sin(motion_model_mean[2])],
+           [0, 1, linear_displacement * np.cos(motion_model_mean[2])],
+           [0, 0, 1]
+        ])
 
     else: # Circular movement
         linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
@@ -253,12 +258,11 @@ def estimate_pose2(
         motion_model_mean[1] = motion_model_mean[1] + linear_to_angular_displacement_ratio * (np.cos(motion_model_mean[2]) - np.cos(motion_model_mean[2] + angular_displacement))
         motion_model_mean[2] = motion_model_mean[2] + angular_displacement
 
-    # Jacobian of the motion model
-    G = np.array([
-        [1, 0, -linear_displacement * np.sin(motion_model_mean[2])],
-        [0, 1, linear_displacement * np.cos(motion_model_mean[2])],
-        [0, 0, 1]
-    ])
+        G = np.array([  
+           [1, 0, -linear_to_angular_displacement_ratio * np.cos(motion_model_mean[2]) + linear_to_angular_displacement_ratio * np.cos(motion_model_mean[2] + angular_displacement)],
+           [0, 1, -linear_to_angular_displacement_ratio * np.sin(motion_model_mean[2]) + linear_to_angular_displacement_ratio * np.sin(motion_model_mean[2] + angular_displacement)],
+           [0, 0, 1]
+        ])
 
     # Process noise covariance
     R_t = np.diag([0.1**2, 0.1**2, 0.1**2])  # Adjust noise values as needed
@@ -284,10 +288,15 @@ def estimate_pose2(
         q = delta_x**2 + delta_y**2
 
         # Line 14 of the EKF-SLAM algorithm
-        z = np.array([
+        z_actual = np.array([[tag_pose[0]], [tag_pose[1]]]) # Actual observation from sensors
+
+        z_estimation = np.array([ # The estimation of observation
             [np.sqrt(q)],
             [np.arctan2(delta_y, delta_x) - motion_model_mean[2]]
         ])
+        
+        z_diff = z_actual - z_estimation
+        z_diff[1] = np.arctan2(np.sin(z_diff[1]), np.cos(z_diff[1]))  # Normalize angle
 
         # Line 15 of the EKF-SLAM algorithm
         F = np.zeros((5, size))
@@ -305,7 +314,7 @@ def estimate_pose2(
         K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T +  0.1)
         
         # Line 18 of the EKF-SLAM algorithm       
-        motion_model_mean = (motion_model_mean + (K@(np.array([[tag_pose[0]], [tag_pose[1]]]) - z)).T)[0]
+        motion_model_mean = motion_model_mean + (K @ z_diff).T[0]
 
         # Line 19 of the EKF-SLAM algorithm
         motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
