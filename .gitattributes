@@ -1,0 +1,2 @@
+bags/quackgpt_manual_easy.bag filter=lfs diff=lfs merge=lfs -text
+bags/quackgpt_joystick_hard.bag filter=lfs diff=lfs merge=lfs -text
