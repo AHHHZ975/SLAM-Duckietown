@@ -162,7 +162,7 @@ def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
     # ---
     return delta_phi
 
-TAG_TO_INDEX = {}
+TAG_INDEX = {}
 
 IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
 
@@ -186,15 +186,15 @@ def EKF_pose_estimation(
                 continue
             
             # "TAG_TO_INDEX" is a dictionary with the "key" equal to the tag id
-            # and the "value" equalt to the index of that tag in the "detected_tags" list.
-            if tag.tag_id not in TAG_TO_INDEX:
-                TAG_TO_INDEX[tag.tag_id] = len(TAG_TO_INDEX)
+            # and the "value" equal to the index of that tag in the "detected_tags" list.
+            if tag.tag_id not in TAG_INDEX:
+                TAG_INDEX[tag.tag_id] = len(TAG_INDEX)
 
             # Store the detected tags in a list of dictionaries with the following information:
             # 1- tag.pose_R: The rotation matrix in the transformation matrix between the camera and the tag
             # 2- tag.pose_t: The translation vector in the transformation matrix between the camera and the tag
             # 3- tag.pose_err: The error in the PnP solver when computing the transformation matrix
-            detected_tags[TAG_TO_INDEX[tag.tag_id]].append([tag.pose_R, tag.pose_t, tag.pose_err])
+            detected_tags[TAG_INDEX[tag.tag_id]].append([tag.pose_R, tag.pose_t, tag.pose_err])
 
 
 
@@ -206,10 +206,10 @@ def EKF_pose_estimation(
     # vector in the transformation matrix of these occasions and in this
     # way we are trying to have an estimation of the relative position of the
     # april tag with respect to the robot
-    INV_TAG_TO_INDEX = {v: k for k, v in TAG_TO_INDEX.items()}
-    tags = {}
+    INV_TAG_TO_INDEX = {v: k for k, v in TAG_INDEX.items()}
+    tags_positions = {}
     for tag_id, tag_data in detected_tags.items():
-        # phi = np.mean([tag[0] for tag in tag_data], axis=0)        
+        # phi = np.mean([tag[0] for tag in tag_data], axis=0)
         t = np.mean([tag[1] for tag in tag_data], axis=0)
         
         err = np.mean([tag[2] for tag in tag_data], axis=0)
@@ -225,9 +225,9 @@ def EKF_pose_estimation(
  
         # Update the position of the april tag
         range_tag = np.sqrt(x_tag_relative_to_robot**2 + y_tag_relative_to_robot**2)
-        bearing_tag = np.arctan2(y_tag_relative_to_robot, x_tag_relative_to_robot)
-        tags[tag_id] = [motion_model_mean[0] + (range_tag* np.cos(motion_model_mean[2])),
-                        motion_model_mean[1] + (range_tag* np.sin(motion_model_mean[2])),
+        bearing_tag = np.arctan2(y_tag_relative_to_robot, x_tag_relative_to_robot) # The bearing is the angle between the tag's position and the forward direction of the camera in the 2D plane
+        tags_positions[tag_id] = [motion_model_mean[0] + (range_tag * np.cos(bearing_tag + motion_model_mean[2])),
+                        motion_model_mean[1] + (range_tag * np.sin(bearing_tag + motion_model_mean[2])),
                         err,
                         INV_TAG_TO_INDEX[tag_id]
                     ]
@@ -235,7 +235,7 @@ def EKF_pose_estimation(
 
 
     # Resize the mu array if needed
-    new_state_vector_size = 3 + 2 * len(TAG_TO_INDEX)
+    new_state_vector_size = 3 + 2 * len(TAG_INDEX)
     old_state_vector_size = len(motion_model_mean)
 
     if len(motion_model_mean) < new_state_vector_size:
@@ -246,8 +246,8 @@ def EKF_pose_estimation(
         for i in range(old_state_vector_size, new_state_vector_size):               
             motion_model_covariance[i, i] = 10000 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
-            motion_model_mean[3 + 2 * tag_no] = tags[tag_no][0] # x position of april tag
-            motion_model_mean[3 + 2 * tag_no + 1] = tags[tag_no][1] # y position of april tags
+            motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
+            motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
 
 
     size = len(motion_model_mean)
@@ -304,8 +304,7 @@ def EKF_pose_estimation(
     ###########################################################################################################
     ########################################### EKF Update Step ###############################################
     ###########################################################################################################    
-    # print(len(tags))
-    for tag_id, tag_pose in tags.items():        
+    for tag_id, tag_pose in tags_positions.items():
         # Line 6 of the EKF-SLAM algorithm
         Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
 
@@ -319,11 +318,11 @@ def EKF_pose_estimation(
         z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
         z_estimation = np.array([ # The estimation of observation
             np.sqrt(q),
-            np.arctan2(delta[1], delta[0]) - motion_model_mean[2]])
-        
+            np.arctan2(delta[1], delta[0]) - motion_model_mean[2]]
+        )
         z_diff = z_actual - z_estimation
         # print(z_actual[0]-z_estimation[0])
-        print(z_actual[1]-z_estimation[1])        
+        # print(z_actual[1]-z_estimation[1])
         z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
 
         # Line 15 of the EKF-SLAM algorithm
@@ -341,15 +340,13 @@ def EKF_pose_estimation(
         # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
         K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
 
-        
         # Line 18 of the EKF-SLAM algorithm             
         motion_model_mean += K @ z_diff
 
-
         # Line 19 of the EKF-SLAM algorithm
-        motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance        
+        motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
 
-    return motion_model_mean, motion_model_covariance, tags
+    return motion_model_mean, motion_model_covariance, tags_positions
 
 def displacement(
     R: float,
