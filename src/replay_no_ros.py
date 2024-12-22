@@ -12,6 +12,9 @@ import os
 
 from collections import defaultdict
 
+MOTION_MODEL_VARIANCE = 0.1
+MEASUREMENT_MODEL_VARIANCE = 0.1
+
 # Command line utility
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process robot name, ROS bag location, and output directory.")
@@ -39,7 +42,7 @@ def replay(dir):
     file = open(os.path.join(dir, "events.csv"), "r")
 
     motion_model_mean = np.array([0.0, 0.0, 0.0]) # x, y, theta
-    motion_model_covariance = np.eye(3) * 0.1
+    motion_model_covariance = np.eye(3) * MOTION_MODEL_VARIANCE
     R = 0.0318  # meters, default value of wheel radius
     baseline = 0.1  # meters, default value of baseline
 
@@ -54,7 +57,7 @@ def replay(dir):
 
     acc_pos = [(0, 0)]
 
-    DELTA_TIME = 500_000_000 # 2 seconds
+    DELTA_TIME = 500_000_000 # 0.5 second
 
     lines = file.readlines()
     timestamp_detectedTags_pair_list = []
@@ -85,7 +88,7 @@ def replay(dir):
             img_path = os.path.join(dir, data)
             img = load_grayscale(img_path)
             detected_april_tags = detect_tags(img)
-            timestamp_detectedTags_pair_list.append( (timestemp, detected_april_tags))
+            timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
             #print("detect_tags", (datetime.now() - before).total_seconds())
             #pass
             bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
@@ -117,7 +120,7 @@ def replay(dir):
                 delta_rphi
             )
 
-            motion_model_mean, motion_model_covariance, tags = estimate_pose2(
+            motion_model_mean, motion_model_covariance, tags = EKF_pose_estimation(
                 angular_displacement,
                 linear_displacement,
                 motion_model_mean,
@@ -163,7 +166,7 @@ TAG_TO_INDEX = {}
 
 IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
 
-def estimate_pose2(
+def EKF_pose_estimation(
     angular_displacement: float,
     linear_displacement: float,
     motion_model_mean: np.ndarray,
@@ -206,21 +209,28 @@ def estimate_pose2(
     INV_TAG_TO_INDEX = {v: k for k, v in TAG_TO_INDEX.items()}
     tags = {}
     for tag_id, tag_data in detected_tags.items():
-        #R = np.mean([tag[0] for tag in tag_data], axis=0)
+        # phi = np.mean([tag[0] for tag in tag_data], axis=0)        
         t = np.mean([tag[1] for tag in tag_data], axis=0)
+        
         err = np.mean([tag[2] for tag in tag_data], axis=0)
 
         # Here, x and z are the relative postions of the april tag with respect to 
         # the specific robot
-        x, z = t[0][0], t[2][0]
+        x_tag_relative_to_robot, y_tag_relative_to_robot = t[2][0], -t[0][0]
+        # x_tag_relative_to_robot, y_tag_relative_to_robot = t[0][0], t[2][0] # what it was before        
 
         # Here we are converting the relative position of the april tag 
-        # to the global position in the world space.
-        global_x = np.cos(motion_model_mean[2]) * z + np.sin(motion_model_mean[2]) * x
-        global_y = np.sin(motion_model_mean[2]) * z - np.cos(motion_model_mean[2]) * x
-        
+        # to the global position in the world space. The origin of the
+        # world coordinate is set at the start position of the Duckiebot.
+ 
         # Update the position of the april tag
-        tags[tag_id] = [motion_model_mean[0]+global_x, motion_model_mean[1]+global_y, err, INV_TAG_TO_INDEX[tag_id]]
+        range_tag = np.sqrt(x_tag_relative_to_robot**2 + y_tag_relative_to_robot**2)
+        bearing_tag = np.arctan2(y_tag_relative_to_robot, x_tag_relative_to_robot)
+        tags[tag_id] = [motion_model_mean[0] + (range_tag* np.cos(motion_model_mean[2])),
+                        motion_model_mean[1] + (range_tag* np.sin(motion_model_mean[2])),
+                        err,
+                        INV_TAG_TO_INDEX[tag_id]
+                    ]
 
 
 
@@ -232,44 +242,56 @@ def estimate_pose2(
         motion_model_mean.resize(new_state_vector_size, refcheck=False)
         motion_model_covariance.resize((new_state_vector_size, new_state_vector_size), refcheck=False)
         
-        # Initialize the new elements in the motion model's mean and covariance matrices
-        for i in range(old_state_vector_size, new_state_vector_size): 
-            print("foobar")    
-            motion_model_covariance[i, i] = 0.1
+        # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
+        for i in range(old_state_vector_size, new_state_vector_size):               
+            motion_model_covariance[i, i] = 10000 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
-            motion_model_mean[3 + 2 * tag_no] = tags[tag_no][0]
-            motion_model_mean[3 + 2 * tag_no + 1] = tags[tag_no][1]
+            motion_model_mean[3 + 2 * tag_no] = tags[tag_no][0] # x position of april tag
+            motion_model_mean[3 + 2 * tag_no + 1] = tags[tag_no][1] # y position of april tags
 
 
-    size = len(motion_model_mean)    
+    size = len(motion_model_mean)
     
     ###########################################################################################################
     ########################################### EKF Prediction Step ###########################################
-    ###########################################################################################################    
-    if abs(angular_displacement) <= 1e-6: # Linear movement        
-        motion_model_mean[0] = motion_model_mean[0] + linear_displacement * np.cos(motion_model_mean[2])
-        motion_model_mean[1] = motion_model_mean[1] + linear_displacement * np.sin(motion_model_mean[2])
-        G = np.array([  
-           [1, 0, -linear_displacement * np.sin(motion_model_mean[2])],
-           [0, 1, linear_displacement * np.cos(motion_model_mean[2])],
+    ###########################################################################################################        
+    num_landmarks = (size - 3) // 2 # Number of landmarks in the state
+    Fx = np.hstack((np.eye(3), np.zeros((3, 2 * num_landmarks)))) # Define Fx (state-to-map matrix)
+    previous_robot_orientation = motion_model_mean[2]
+    
+    if abs(angular_displacement) <= 1e-2: # Linear movement 
+
+        motion_model_mean = motion_model_mean + Fx.T @ np.array([
+            linear_displacement * np.cos(previous_robot_orientation),
+            linear_displacement * np.sin(previous_robot_orientation),
+            0
+        ])     
+
+        # Jacobian
+        G = np.array([
+           [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
+           [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
            [0, 0, 1]
         ])
 
     else: # Circular movement
         linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
-        # Move the robot
-        motion_model_mean[0] = motion_model_mean[0] + linear_to_angular_displacement_ratio * (np.sin(motion_model_mean[2] + angular_displacement) - np.sin(motion_model_mean[2]))
-        motion_model_mean[1] = motion_model_mean[1] + linear_to_angular_displacement_ratio * (np.cos(motion_model_mean[2]) - np.cos(motion_model_mean[2] + angular_displacement))
-        motion_model_mean[2] = motion_model_mean[2] + angular_displacement
+        motion_model_mean = motion_model_mean + (Fx.T @ np.array([
+            -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
+            linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
+            angular_displacement
+        ]))        
+        motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
 
+        # Jacobian
         G = np.array([  
-           [1, 0, -linear_to_angular_displacement_ratio * np.cos(motion_model_mean[2]) + linear_to_angular_displacement_ratio * np.cos(motion_model_mean[2] + angular_displacement)],
-           [0, 1, -linear_to_angular_displacement_ratio * np.sin(motion_model_mean[2]) + linear_to_angular_displacement_ratio * np.sin(motion_model_mean[2] + angular_displacement)],
+           [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
+           [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
            [0, 0, 1]
         ])
 
     # Noise covariance matrix for the motion model
-    R = np.diag([0.1**2, 0.1**2, 0.1**2])
+    R = np.diag([MOTION_MODEL_VARIANCE**2, MOTION_MODEL_VARIANCE**2, (MOTION_MODEL_VARIANCE/2)**2])
 
     # State mapping matrix
     F = np.zeros((3,size))
@@ -282,47 +304,47 @@ def estimate_pose2(
     ###########################################################################################################
     ########################################### EKF Update Step ###############################################
     ###########################################################################################################    
+    # print(len(tags))
     for tag_id, tag_pose in tags.items():        
         # Line 6 of the EKF-SLAM algorithm
-        Q = np.diag([0.1**2, 0.1**2]) # Noise covariance matrix for the measurement model
+        Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
 
-        # Line 12 of the EKF-SLAM algorithm      
-        delta_x = tag_pose[0] - motion_model_mean[0]
-        delta_y = tag_pose[1] - motion_model_mean[1]
+        # Line 12 of the EKF-SLAM algorithm 
+        delta = tag_pose[0:2] - motion_model_mean[0:2]     
         
         # Line 13 of the EKF-SLAM algorithm
-        q = delta_x**2 + delta_y**2
+        q = delta.T @ delta
 
         # Line 14 of the EKF-SLAM algorithm
-        z_actual = np.array([[tag_pose[0]], [tag_pose[1]]]) # Actual observation from sensors
+        z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
         z_estimation = np.array([ # The estimation of observation
-            [np.sqrt(q)],
-            [np.arctan2(delta_y, delta_x) - motion_model_mean[2]]
-        ])
+            np.sqrt(q),
+            np.arctan2(delta[1], delta[0]) - motion_model_mean[2]])
+        
         z_diff = z_actual - z_estimation
-        # print(z_actual[0], z_estimation[0])
-        # print(z_actual[1], z_estimation[1])
-        z_diff[1] = np.arctan2(np.sin(z_diff[1]), np.cos(z_diff[1]))  # Normalize the angle in the observation difference to fall within the range [−π,π]
-
-        print(z_diff[1])
+        # print(z_actual[0]-z_estimation[0])
+        print(z_actual[1]-z_estimation[1])        
+        z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
 
         # Line 15 of the EKF-SLAM algorithm
-        F = np.zeros((5, size))
-        F[0:3, 0:3] = np.eye(3)
-        F[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
+        Fx_j = np.zeros((5, size))
+        Fx_j[0:3, 0:3] = np.eye(3)
+        Fx_j[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
 
         # Line 16 of the EKF-SLAM algorithm
         H = (np.array([
-            [-np.sqrt(q) * delta_x, -np.sqrt(q) * delta_y, .0, np.sqrt(q) * delta_x, np.sqrt(q) * delta_y],
-            [delta_y, -delta_x, -q, -delta_y, delta_x]
-        ], dtype=float) / q) @ F
-        
+            [-np.sqrt(q) * delta[0], -np.sqrt(q) * delta[1], .0, np.sqrt(q) * delta[0], np.sqrt(q) * delta[1]],
+            [delta[1], -delta[0], -q, -delta[1], delta[0]]
+        ], dtype=float) / q) @ Fx_j
+
         # Line 17 of the EKF-SLAM algorithm
         # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
         K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
+
         
-        # Line 18 of the EKF-SLAM algorithm
-        motion_model_mean += (K @ z_diff).T[0]
+        # Line 18 of the EKF-SLAM algorithm             
+        motion_model_mean += K @ z_diff
+
 
         # Line 19 of the EKF-SLAM algorithm
         motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance        
@@ -419,10 +441,12 @@ detector = Detector(searchpath=['apriltags'],
                    decode_sharpening = 0.25,
                    debug=0)
 
+# Camera intrinsic parameters on the Apriltag's website: 336.7755634193813, 333.3575643300718, 336.02729840829176, 212.77376312080065
+# Our robot's camera intrinsic parameters: 340, 336, 328, 257
 def detect_tags(img):
-    return detector.detect(img, estimate_tag_pose=True, camera_params=[340, 336, 328, 257], tag_size=0.05)
+    return detector.detect(img, estimate_tag_pose=True, camera_params=[340, 336, 328, 257], tag_size=0.065)
     
-print("hey")
+
 plt.ion()
 plt.show()
 fig_img, ax_img = plt.subplots()
