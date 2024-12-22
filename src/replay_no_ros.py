@@ -13,12 +13,12 @@ import os
 from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
-MEASUREMENT_MODEL_VARIANCE = 0.1
+MEASUREMENT_MODEL_VARIANCE = 0.2
 
 ENABLE_MEASUREMENT_MODEL = 1
-ENABLE_CIRCULAR_INTERPOLATION = 1
+ENABLE_CIRCULAR_INTERPOLATION = 0
 
-DELTA_TIME = 0.5 # second
+DELTA_TIME = 2 # second
 
 
 image_list = []
@@ -278,7 +278,9 @@ def EKF_pose_estimation(
         tags_positions[tag_id] = [motion_model_mean[0] + (range_tag * np.cos(bearing_tag + motion_model_mean[2])),
                         motion_model_mean[1] + (range_tag * np.sin(bearing_tag + motion_model_mean[2])),
                         err,
-                        INV_TAG_TO_INDEX[tag_id]
+                        INV_TAG_TO_INDEX[tag_id],
+                        range_tag,
+                        bearing_tag
                     ]
 
 
@@ -378,6 +380,7 @@ def EKF_pose_estimation(
             # Line 13 of the EKF-SLAM algorithm
             q = delta.T @ delta
 
+            range_tag, bearing_tag = tag_pose[4:6]
             # Line 14 of the EKF-SLAM algorithm
             z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
             z_estimation = np.array([ # The estimation of observation
