@@ -65,6 +65,8 @@ def replay(dir):
     ground_truth_positions = []
     list_of_landmarks = False
 
+    camera_params = [340, 336, 328, 257]
+
     i = 0
     for line in lines:
         timestemp, event, data, *rest = line.strip().split(",")
@@ -93,7 +95,7 @@ def replay(dir):
         elif event == "image":
             img_path = os.path.join(dir, data)
             img = load_grayscale(img_path)
-            detected_april_tags = detect_tags(img)
+            detected_april_tags = detect_tags(img, camera_params)
             timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
             #print("detect_tags", (datetime.now() - before).total_seconds())
             #pass
@@ -108,10 +110,34 @@ def replay(dir):
             # Do not look at the following line. It's not good practice, and mostly a quick and dirty way to do it.
             list_of_landmarks = eval(line[second_coma+1:])
 
+        elif event == "camera_intrinsis":
+            first_coma = line.find(",")
+            second_coma = line.find(",", first_coma+1)
+
+            # Do not look at the following line. It's not good practice, and mostly a quick and dirty way to do it.
+            camera_intrinsics = eval(line[second_coma+1:])
+
+            # Here, camera_intrisics is a list containing the K matrix (calibration matrix) in it's second field (camera_intrinsics[1])
+            # The matrix is as follows
+            #
+            # [ f_x 0   t_x ]
+            # [ 0   f_y t_y ]
+            # [ 0   0   1   ]
+            # 
+            # In our case, the K matrix is represented as a vector in ONE dimention. We can thus see that :
+            #  f_x = index 0
+            #  f_y = index 4
+            #  t_x = index 2
+            #  t_y = index 5
+            # 
+            #  camera_params is then used in the dt-apriltags library which need the data in this format [f_x, f_y, t_x, t_y]. See dt-apriltag repo for more information.
+            K = camera_intrinsics[1]
+            camera_params = [K[0], K[4],K[2],K[5]]
+
         else:
             print("Unknown event")
             print(event)
-            #exit(1)
+            exit(1)
 
         timestemp = float(timestemp)
         if prev_timestemp == False:
@@ -467,8 +493,8 @@ detector = Detector(searchpath=['apriltags'],
 
 # Camera intrinsic parameters on the Apriltag's website: 336.7755634193813, 333.3575643300718, 336.02729840829176, 212.77376312080065
 # Our robot's camera intrinsic parameters: 340, 336, 328, 257
-def detect_tags(img):
-    return detector.detect(img, estimate_tag_pose=True, camera_params=[340, 336, 328, 257], tag_size=0.065)
+def detect_tags(img, camera_params):
+    return detector.detect(img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
     
 
 plt.ion()
