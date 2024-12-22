@@ -6,19 +6,26 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.path import Path
 import matplotlib.patches as patches
-
+from dt_apriltags import Detector
+import cv2
 import argparse
 import os
-
 from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
 MEASUREMENT_MODEL_VARIANCE = 0.1
 
-ENABLE_MEASUREMENT_MODEL = 0
-ENABLE_CIRCULAR_INTERPOLATION = 0
+ENABLE_MEASUREMENT_MODEL = 1
+ENABLE_CIRCULAR_INTERPOLATION = 1
 
 DELTA_TIME = 0.5 # second
+
+
+image_list = []
+TAG_INDEX = {}
+IGNORE_TAGS = []
+# IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
+
 
 # Command line utility
 def parse_arguments():
@@ -37,9 +44,10 @@ def parse_arguments():
     return args
 
 
-UNIQUE_COLOR=['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9',]
 def get_color(id):
-    return UNIQUE_COLOR[id%len(UNIQUE_COLOR)]
+    # Colors to represent the april tags in our results.
+    unique_colors=['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9',]
+    return unique_colors[id%len(unique_colors)]
 
 
 # Main replay function
@@ -101,12 +109,9 @@ def replay(dir):
             img = load_grayscale(img_path)
             detected_april_tags = detect_tags(img, camera_params)
             timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
-            #print("detect_tags", (datetime.now() - before).total_seconds())
-            #pass
             bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
             visualize_bounding_boxes(img, bounding_boxes)
-            #print("\n".join(map(lambda x:f"{x.tag_id} : {x.pose_t}", detected_image)))
-            #breakpoint()
+
         elif event == "landmarks":
             first_coma = line.find(",")
             second_coma = line.find(",", first_coma+1)
@@ -209,10 +214,6 @@ def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
     # ---
     return delta_phi
 
-TAG_INDEX = {}
-
-IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
-IGNORE_TAGS = []
 
 def EKF_pose_estimation(
     angular_displacement: float,
@@ -425,12 +426,7 @@ def displacement(
     angular_displacement = (linear_displacement_wheel_right - linear_displacement_wheel_left) / (baseline)
 
     return angular_displacement, linear_displacement
-    #x_curr = x_prev + (linear_displacement_robot_origin*np.cos(theta_curr))
-    #y_curr = y_prev + (linear_displacement_robot_origin*np.sin(theta_curr))
-    ## ---
-    #return x_curr, y_curr, theta_curr
 
-image_list = []
 def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):
 
     #codes = [
@@ -491,35 +487,17 @@ def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):
 
 
 
-from dt_apriltags import Detector
-import cv2
-
 def load_grayscale(image_path):
     grayscale_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     
     return grayscale_image.astype(np.uint8)
 
 
-detector = Detector(searchpath=['apriltags'],
-                   families='tag36h11',
-                   nthreads=1,
-                   #max_hamming=max_hamming,
-                   quad_decimate=1.0,
-                   quad_sigma = 0.0,
-                   refine_edges = 1,
-                   decode_sharpening = 0.25,
-                   debug=0)
 
 # Camera intrinsic parameters on the Apriltag's website: 336.7755634193813, 333.3575643300718, 336.02729840829176, 212.77376312080065
 # Our robot's camera intrinsic parameters: 340, 336, 328, 257
 def detect_tags(img, camera_params):
     return detector.detect(img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-    
-
-plt.ion()
-plt.show()
-fig_img, ax_img = plt.subplots()
-fig_path, ax_path = plt.subplots()
 
 
 def visualize_bounding_boxes(image, bounding_boxes):
@@ -584,6 +562,24 @@ def create_video_from_images(image_list, video_path, fps=10):
     print(f"Video saved to {video_path}")
 
 
-args = parse_arguments()
+if __name__ == "__main__":
+    detector = Detector(searchpath=['apriltags'],
+                    families='tag36h11',
+                    nthreads=1,
+                    #max_hamming=max_hamming,
+                    quad_decimate=1.0,
+                    quad_sigma = 0.0,
+                    refine_edges = 1,
+                    decode_sharpening = 0.25,
+                    debug=0)
 
-replay(args.dir)
+
+    plt.ion()
+    plt.show()
+    fig_img, ax_img = plt.subplots()
+    fig_path, ax_path = plt.subplots()
+
+
+    args = parse_arguments()
+
+    replay(args.dir)
