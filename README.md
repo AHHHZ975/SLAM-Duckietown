@@ -125,9 +125,8 @@ The difference becomes more visible when increasing the delta time from 2 second
 
 
 ## Ablation studies
-#### Ablation on various amount of ```DELTA_TIME```
 
-
+#### 1- Ablation on various amount of ```DELTA_TIME```
 <table>
   <tr>
     <th>0.05 sec</th>
@@ -145,6 +144,52 @@ The difference becomes more visible when increasing the delta time from 2 second
     <td><img src="https://github.com/user-attachments/assets/c5e69082-9db9-45e5-9e68-ec592bf0e5b6" alt="Image 1" width="600"/></td>
     <td><img src="https://github.com/user-attachments/assets/59f12939-e677-4bc7-9fd5-ed7a453fc768" alt="Image 1" width="600"/></td>
   </tr>
+</table>
+
+#### 2- Ablation on various amount of ```MEASUREMENT_MODEL_VARIANCE```
+This study is done when the ```MOTION_MODEL_VARIANCE``` is kept fixed at the value of 0.1.
+<table>
+  <tr>
+    <th>MEASUREMENT_MODEL_VARIANCE=0.01</th>
+    <th>MEASUREMENT_MODEL_VARIANCE=0.2</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/a2112685-4cfa-4446-aeb0-9fe239be589e" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/6b778280-333c-49dd-bb5b-48aaa1cedff7" alt="Image 1" width="600"/></td>
+  </tr>
+  <tr>
+    <th>MEASUREMENT_MODEL_VARIANCE=1</th>
+    <th>MEASUREMENT_MODEL_VARIANCE=10</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/86889e8d-2f44-49cb-8e78-dbeed6272f0c" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/b6397e00-d8bf-4132-9425-64e07df2f10f" alt="Image 1" width="600"/></td>
+  </tr>
+  <tr>
+</table>
+
+
+#### 3- Ablation on various amount of ```MOTION_MODEL_VARIANCE```
+This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at the value of 1.
+
+<table>
+  <tr>
+    <th>MOTION_MODEL_VARIANCE=0.01</th>
+    <th>MOTION_MODEL_VARIANCE=0.1</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/550a8972-7f85-4f69-9c2c-b318c0c81d8e" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/6f72dbc0-3d3a-487f-8c37-8ef1e2abc143" alt="Image 1" width="600"/></td>
+  </tr>
+  <tr>
+    <th>MOTION_MODEL_VARIANCE=0.3</th>
+    <th>MOTION_MODEL_VARIANCE=1</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/63803a17-101f-4de4-8f46-bae28c11791d" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/10472a6d-11d3-41e0-8430-6f02d0cdb943" alt="Image 1" width="600"/></td>
+  </tr>
+  <tr>
 </table>
 
 
