@@ -93,7 +93,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 ## The effect of different interpolation techniques on the pose trajectory
 
-In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM.
+In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=2``` seconds.
 
 <table>
   <tr>
@@ -106,6 +106,20 @@ In both cases, the orange curve shows the prediction from EKF-SLAM motion model 
   </tr>
 </table>
 
+The difference becomes more visible when increasing the delta time from 2 seconds to 5 seconds. Here is the results with the ```DELTA_TIME=5``` seconds.
+
+
+
+<table>
+  <tr>
+    <th>Pose estimation using a circular interpolation</th>
+    <th>Pose estimation using a linear interpolation</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/6bec11d0-0c0c-4e30-b2ae-98ccde7de3a0" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/e0b748ed-436a-4c90-a15f-428f785ca7d2" alt="Image 1" width="600"/></td>    
+  </tr>
+</table>
 
 ## The comparison with the ground truth data
 
