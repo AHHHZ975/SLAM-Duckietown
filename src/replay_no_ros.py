@@ -63,6 +63,7 @@ def replay(dir):
     timestamp_detectedTags_pair_list = []
     tagss = {}
     ground_truth_positions = []
+    list_of_landmarks = False
 
     i = 0
     for line in lines:
@@ -100,6 +101,13 @@ def replay(dir):
             visualize_bounding_boxes(img, bounding_boxes)
             #print("\n".join(map(lambda x:f"{x.tag_id} : {x.pose_t}", detected_image)))
             #breakpoint()
+        elif event == "landmarks":
+            first_coma = line.find(",")
+            second_coma = line.find(",", first_coma+1)
+
+            # Do not look at the following line. It's not good practice, and mostly a quick and dirty way to do it.
+            list_of_landmarks = eval(line[second_coma+1:])
+
         else:
             print("Unknown event")
             print(event)
@@ -144,7 +152,7 @@ def replay(dir):
 
             # Displaying the robot's trajectory
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
-            plot_path(acc_pos, ground_truth_positions,  motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
+            plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
             plt.pause(0.05)
             #input("Press Enter to continue...")
 
@@ -174,6 +182,7 @@ def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
 TAG_INDEX = {}
 
 IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
+IGNORE_TAGS = []
 
 def EKF_pose_estimation(
     angular_displacement: float,
@@ -377,7 +386,7 @@ def displacement(
     #return x_curr, y_curr, theta_curr
 
 image_list = []
-def plot_path(vertices, ground_truth, sigma_x, sigma_y, tags):
+def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):
 
     #codes = [
     #    Path.MOVETO,  # Move to the starting point
@@ -405,6 +414,10 @@ def plot_path(vertices, ground_truth, sigma_x, sigma_y, tags):
     ax_path.add_patch(gt_patch)
 
     
+
+    if landmarks:
+        for land in landmarks:
+            ax_path.plot(land[0], land[1], 'ro', color="red")
 
     # Add variance ellipse
     ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none')
