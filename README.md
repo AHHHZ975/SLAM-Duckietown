@@ -91,6 +91,22 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
 [![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
+## The effect of different interpolation techniques on the pose trajectory
+
+In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM.
+
+<table>
+  <tr>
+    <th>Pose estimation using a circular interpolation</th>
+    <th>Pose estimation using a linear interpolation</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/d1f55d74-4531-4e06-acba-326ac7768c71" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/07f40984-d02b-44ff-bdcd-14aa7386656b" alt="Image 1" width="600"/></td>    
+  </tr>
+</table>
+
+
 ## The comparison with the ground truth data
 
 
