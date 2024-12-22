@@ -13,12 +13,11 @@ import os
 from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
-MEASUREMENT_MODEL_VARIANCE = 0.2
-
+MEASUREMENT_MODEL_VARIANCE = 1
+DELTA_TIME = 0.05 # second
 ENABLE_MEASUREMENT_MODEL = 1
-ENABLE_CIRCULAR_INTERPOLATION = 0
+ENABLE_CIRCULAR_INTERPOLATION = 1
 
-DELTA_TIME = 2 # second
 
 
 image_list = []
@@ -188,13 +187,7 @@ def replay(dir):
             # Displaying the robot's trajectory
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
             plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
-            plt.pause(0.05)
-            #input("Press Enter to continue...")
-
-        
-    #plot(acc_pos)
-    while True:
-        plt.pause(0.05)
+            plt.pause(0.05)            
 
 def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
     """
@@ -430,16 +423,14 @@ def displacement(
 
     return angular_displacement, linear_displacement
 
-def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):
+def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):    
+    from matplotlib import rcParams
 
-    #codes = [
-    #    Path.MOVETO,  # Move to the starting point
-    #    Path.LINETO,  # Draw a line
-    #    Path.LINETO,  # Draw another line
-    ##    Path.LINETO,  # Draw another line
-    #]
+    # Set global font size
+    rcParams.update({'font.size': 18})  # Increase the global font size to 18
 
     ax_path.clear()
+
     # Create the Path object
     path = Path(vertices)
     ground_truth_path = Path(ground_truth)
@@ -450,43 +441,50 @@ def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):
     min_y = min([y for x, y in vertices])
 
     # Create a PathPatch
-    patch = patches.PathPatch(path, facecolor="none", edgecolor='orange', lw=5)
-    gt_patch = patches.PathPatch(ground_truth_path, facecolor="none", edgecolor='purple', lw=2)
+    patch = patches.PathPatch(path, facecolor="none", edgecolor='orange', lw=5, label="Estimated Robot Pose")
+    gt_patch = patches.PathPatch(ground_truth_path, facecolor="none", edgecolor='purple', lw=2, label="Ground Truth Robot Pose")
 
-    # Set up the figure and axis
+    # Add patches to the axis
     ax_path.add_patch(patch)
     ax_path.add_patch(gt_patch)
 
-    
-
+    # Plot landmarks if present
     if landmarks:
         for land in landmarks:
-            ax_path.plot(land[0], land[1], 'ro', color="red")
+            ax_path.plot(land[0], land[1], 'ro', color="red", label="Ground Truth Landmark Pose")
 
     # Add variance ellipse
-    ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none')
+    ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none', label="Variance Ellipse")
     ax_path.add_patch(ellipse)
 
-    # Add points for the tags
+    # Plot tags and their text
     for tag_id, tag in tags.items():
-        ax_path.plot(tag[0], tag[1], 'ro', color=get_color(tag[3]))
-        ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=25)
+        ax_path.plot(tag[0], tag[1], 'rs', color=get_color(tag[3]), label="Predicted Landmark Pose")
+        ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=20)  # Increase text font size for tags
 
     # Set limits and aspect ratio
-    ax_path.set_xlim(min_x-1, max_x+1)
-    ax_path.set_ylim(min_y-1, max_y+1)
+    ax_path.set_xlim(min_x - 1, max_x + 1)
+    ax_path.set_ylim(min_y - 1, max_y + 1)
     ax_path.set_aspect('equal')
 
-    #fig_path.title("2D Canvas Path")
+    # Add axis labels
+    ax_path.set_xlabel("X position (m)", fontsize=20)
+    ax_path.set_ylabel("Y position (m)", fontsize=20)
 
-    # Display the plot
+    # Add a title to the figure
+    fig_path.suptitle("Robot and Landmark Pose Estimation Visualization Using EKF-SLAM Algorithm", fontsize=24)
+
+    # Add the legend with increased font size
+    handles, labels = ax_path.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))  # Remove duplicates
+    ax_path.legend(by_label.values(), by_label.keys(), loc='upper right', fontsize=16)
+
+    # Update the figure
     fig_path.canvas.draw()
     fig_path.canvas.flush_events()
-    #plt.title("2D Canvas Path")
-    #plt.xlabel("X-axis")
-    #plt.ylabel("Y-axis")
-    #plt.grid(True)
-    #plt.plot()
+
+
+
 
 
 
@@ -540,10 +538,7 @@ def visualize_bounding_boxes(image, bounding_boxes):
     fig_img.canvas.draw()
     fig_img.canvas.flush_events()
     plt.show()
-    #frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    #frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    #image_list.append(frame)
-    #plt.close(fig)  # Close the figure to free memory
+
 
 
 def create_video_from_images(image_list, video_path, fps=10):
@@ -586,3 +581,6 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     replay(args.dir)
+            
+    while True:
+        plt.pause(0.05)
