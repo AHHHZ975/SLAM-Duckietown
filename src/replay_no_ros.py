@@ -57,17 +57,22 @@ def replay(dir):
 
     acc_pos = [(0, 0)]
 
-    DELTA_TIME = 500_000_000 # 0.5 second
+    DELTA_TIME = 0.5 # 0.5 second
 
     lines = file.readlines()
     timestamp_detectedTags_pair_list = []
     tagss = {}
+    ground_truth_positions = []
 
     i = 0
-    for line in lines[1000:]:
-        timestemp, event, data = line.strip().split(",")
+    for line in lines:
+        timestemp, event, data, *rest = line.strip().split(",")
 
-        if event == "left_wheel":
+        if event == "ground_truth":
+            x, y = float(data), float(rest[0])
+            ground_truth_positions.append((x, y))
+
+        elif event == "left_wheel":
             data = int(data)
             if prev_ltick == False:
                 prev_ltick = data
@@ -95,8 +100,12 @@ def replay(dir):
             visualize_bounding_boxes(img, bounding_boxes)
             #print("\n".join(map(lambda x:f"{x.tag_id} : {x.pose_t}", detected_image)))
             #breakpoint()
+        else:
+            print("Unknown event")
+            print(event)
+            #exit(1)
 
-        timestemp = int(timestemp)
+        timestemp = float(timestemp)
         if prev_timestemp == False:
             prev_timestemp = timestemp
         
@@ -135,7 +144,7 @@ def replay(dir):
 
             # Displaying the robot's trajectory
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
-            plot_path(acc_pos, motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
+            plot_path(acc_pos, ground_truth_positions,  motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
             plt.pause(0.05)
             #input("Press Enter to continue...")
 
@@ -368,7 +377,7 @@ def displacement(
     #return x_curr, y_curr, theta_curr
 
 image_list = []
-def plot_path(vertices, sigma_x, sigma_y, tags):
+def plot_path(vertices, ground_truth, sigma_x, sigma_y, tags):
 
     #codes = [
     #    Path.MOVETO,  # Move to the starting point
@@ -380,6 +389,7 @@ def plot_path(vertices, sigma_x, sigma_y, tags):
     ax_path.clear()
     # Create the Path object
     path = Path(vertices)
+    ground_truth_path = Path(ground_truth)
 
     max_x = max([x for x, y in vertices])
     max_y = max([y for x, y in vertices])
@@ -387,10 +397,14 @@ def plot_path(vertices, sigma_x, sigma_y, tags):
     min_y = min([y for x, y in vertices])
 
     # Create a PathPatch
-    patch = patches.PathPatch(path, facecolor='orange', edgecolor='black', lw=2)
+    patch = patches.PathPatch(path, facecolor="none", edgecolor='orange', lw=5)
+    gt_patch = patches.PathPatch(ground_truth_path, facecolor="none", edgecolor='purple', lw=2)
 
     # Set up the figure and axis
     ax_path.add_patch(patch)
+    ax_path.add_patch(gt_patch)
+
+    
 
     # Add variance ellipse
     ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none')
