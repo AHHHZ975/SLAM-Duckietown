@@ -15,6 +15,8 @@ from collections import defaultdict
 MOTION_MODEL_VARIANCE = 0.1
 MEASUREMENT_MODEL_VARIANCE = 0.1
 
+ENABLE_MEASUREMENT_MODEL = 1
+
 # Command line utility
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process robot name, ROS bag location, and output directory.")
@@ -168,7 +170,7 @@ def replay(dir):
                 linear_displacement,
                 motion_model_mean,
                 motion_model_covariance,
-                DELTA_TIME / 1_000_000_000,
+                DELTA_TIME,
                 timestamp_detectedTags_pair_list
             )
             timestamp_detectedTags_pair_list.clear()
@@ -348,47 +350,48 @@ def EKF_pose_estimation(
     ###########################################################################################################
     ########################################### EKF Update Step ###############################################
     ###########################################################################################################    
-    for tag_id, tag_pose in tags_positions.items():
-        # Line 6 of the EKF-SLAM algorithm
-        Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
+    if ENABLE_MEASUREMENT_MODEL:
+        for tag_id, tag_pose in tags_positions.items():
+            # Line 6 of the EKF-SLAM algorithm
+            Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
 
-        # Line 12 of the EKF-SLAM algorithm 
-        delta = tag_pose[0:2] - motion_model_mean[0:2]     
-        
-        # Line 13 of the EKF-SLAM algorithm
-        q = delta.T @ delta
+            # Line 12 of the EKF-SLAM algorithm 
+            delta = tag_pose[0:2] - motion_model_mean[0:2]     
+            
+            # Line 13 of the EKF-SLAM algorithm
+            q = delta.T @ delta
 
-        # Line 14 of the EKF-SLAM algorithm
-        z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
-        z_estimation = np.array([ # The estimation of observation
-            np.sqrt(q),
-            np.arctan2(delta[1], delta[0]) - motion_model_mean[2]]
-        )
-        z_diff = z_actual - z_estimation
-        # print(z_actual[0]-z_estimation[0])
-        # print(z_actual[1]-z_estimation[1])
-        z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
+            # Line 14 of the EKF-SLAM algorithm
+            z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
+            z_estimation = np.array([ # The estimation of observation
+                np.sqrt(q),
+                np.arctan2(delta[1], delta[0]) - motion_model_mean[2]]
+            )
+            z_diff = z_actual - z_estimation
+            # print(z_actual[0]-z_estimation[0])
+            # print(z_actual[1]-z_estimation[1])
+            z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
 
-        # Line 15 of the EKF-SLAM algorithm
-        Fx_j = np.zeros((5, size))
-        Fx_j[0:3, 0:3] = np.eye(3)
-        Fx_j[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
+            # Line 15 of the EKF-SLAM algorithm
+            Fx_j = np.zeros((5, size))
+            Fx_j[0:3, 0:3] = np.eye(3)
+            Fx_j[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
 
-        # Line 16 of the EKF-SLAM algorithm
-        H = (np.array([
-            [-np.sqrt(q) * delta[0], -np.sqrt(q) * delta[1], .0, np.sqrt(q) * delta[0], np.sqrt(q) * delta[1]],
-            [delta[1], -delta[0], -q, -delta[1], delta[0]]
-        ], dtype=float) / q) @ Fx_j
+            # Line 16 of the EKF-SLAM algorithm
+            H = (np.array([
+                [-np.sqrt(q) * delta[0], -np.sqrt(q) * delta[1], .0, np.sqrt(q) * delta[0], np.sqrt(q) * delta[1]],
+                [delta[1], -delta[0], -q, -delta[1], delta[0]]
+            ], dtype=float) / q) @ Fx_j
 
-        # Line 17 of the EKF-SLAM algorithm
-        # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
-        K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
+            # Line 17 of the EKF-SLAM algorithm
+            # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
+            K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
 
-        # Line 18 of the EKF-SLAM algorithm             
-        motion_model_mean += K @ z_diff
+            # Line 18 of the EKF-SLAM algorithm             
+            motion_model_mean += K @ z_diff
 
-        # Line 19 of the EKF-SLAM algorithm
-        motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
+            # Line 19 of the EKF-SLAM algorithm
+            motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
 
     return motion_model_mean, motion_model_covariance, tags_positions
 
