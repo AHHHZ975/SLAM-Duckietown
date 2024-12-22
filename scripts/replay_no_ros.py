@@ -13,7 +13,7 @@ import os
 from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
-MEASUREMENT_MODEL_VARIANCE = 10000000
+MEASUREMENT_MODEL_VARIANCE = 0.1
 
 # Command line utility
 def parse_arguments():
@@ -209,31 +209,28 @@ def EKF_pose_estimation(
     INV_TAG_TO_INDEX = {v: k for k, v in TAG_TO_INDEX.items()}
     tags = {}
     for tag_id, tag_data in detected_tags.items():
-        #R = np.mean([tag[0] for tag in tag_data], axis=0)        
+        # phi = np.mean([tag[0] for tag in tag_data], axis=0)        
         t = np.mean([tag[1] for tag in tag_data], axis=0)
-        print(t)
+        
         err = np.mean([tag[2] for tag in tag_data], axis=0)
 
         # Here, x and z are the relative postions of the april tag with respect to 
         # the specific robot
-        x, y = t[2][0], -t[0][0]
-        # x, y = t[0][0], t[2][0] # what it was before
+        x_tag_relative_to_robot, y_tag_relative_to_robot = t[2][0], -t[0][0]
+        # x_tag_relative_to_robot, y_tag_relative_to_robot = t[0][0], t[2][0] # what it was before        
 
         # Here we are converting the relative position of the april tag 
         # to the global position in the world space. The origin of the
         # world coordinate is set at the start position of the Duckiebot.
-        cos = np.cos
-        sin = np.sin
-        theta = (10/360) * 2*np.pi
-        rotation_matrix = np.array([[1,0,0],[0, cos(theta), -sin(theta)],[0, sin(theta),cos(theta)]])
-        tag_pose_world_space = np.dot(rotation_matrix, np.array([x, y, 0]))
-        global_x, global_y, _ = tag_pose_world_space
-
-        # global_x = np.cos(motion_model_mean[2]) * y + np.sin(motion_model_mean[2]) * x
-        # global_y = np.sin(motion_model_mean[2]) * y - np.cos(motion_model_mean[2]) * x
-        
+ 
         # Update the position of the april tag
-        tags[tag_id] = [global_x, global_y, err, INV_TAG_TO_INDEX[tag_id]]
+        range_tag = np.sqrt(x_tag_relative_to_robot**2 + y_tag_relative_to_robot**2)
+        bearing_tag = np.arctan2(y_tag_relative_to_robot, x_tag_relative_to_robot)
+        tags[tag_id] = [motion_model_mean[0] + (range_tag* np.cos(motion_model_mean[2])),
+                        motion_model_mean[1] + (range_tag* np.sin(motion_model_mean[2])),
+                        err,
+                        INV_TAG_TO_INDEX[tag_id]
+                    ]
 
 
 
@@ -269,9 +266,8 @@ def EKF_pose_estimation(
             linear_displacement * np.sin(previous_robot_orientation),
             0
         ])     
-        # motion_model_mean[0] = motion_model_mean[0] + linear_displacement * np.cos(motion_model_mean[2])
-        # motion_model_mean[1] = motion_model_mean[1] + linear_displacement * np.sin(motion_model_mean[2])
 
+        # Jacobian
         G = np.array([
            [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
            [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
@@ -284,13 +280,10 @@ def EKF_pose_estimation(
             -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
             linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
             angular_displacement
-        ]))
-        # Move the robot
-        # motion_model_mean[0] = motion_model_mean[0] + linear_to_angular_displacement_ratio * (np.sin(motion_model_mean[2] + angular_displacement) - np.sin(motion_model_mean[2]))
-        # motion_model_mean[1] = motion_model_mean[1] + linear_to_angular_displacement_ratio * (np.cos(motion_model_mean[2]) - np.cos(motion_model_mean[2] + angular_displacement))
-        # motion_model_mean[2] = motion_model_mean[2] + angular_displacement
+        ]))        
         motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
 
+        # Jacobian
         G = np.array([  
            [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
            [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
@@ -311,45 +304,47 @@ def EKF_pose_estimation(
     ###########################################################################################################
     ########################################### EKF Update Step ###############################################
     ###########################################################################################################    
+    # print(len(tags))
     for tag_id, tag_pose in tags.items():        
         # Line 6 of the EKF-SLAM algorithm
-        Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, (MEASUREMENT_MODEL_VARIANCE/5)**2]) # Noise covariance matrix for the measurement model
+        Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
 
-        # Line 12 of the EKF-SLAM algorithm      
-        delta_x = tag_pose[0] - motion_model_mean[0]
-        delta_y = tag_pose[1] - motion_model_mean[1]
+        # Line 12 of the EKF-SLAM algorithm 
+        delta = tag_pose[0:2] - motion_model_mean[0:2]     
         
         # Line 13 of the EKF-SLAM algorithm
-        q = delta_x**2 + delta_y**2
+        q = delta.T @ delta
 
         # Line 14 of the EKF-SLAM algorithm
-        z_actual = np.array([[tag_pose[0]], [tag_pose[1]]]) # Actual observation from sensors
+        z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
         z_estimation = np.array([ # The estimation of observation
-            [np.sqrt(q)],
-            [np.arctan2(delta_y, delta_x) - motion_model_mean[2]]
-        ])
+            np.sqrt(q),
+            np.arctan2(delta[1], delta[0]) - motion_model_mean[2]])
+        
         z_diff = z_actual - z_estimation
-        # print(z_actual[0], z_estimation[0])
-        # print(z_actual[1], z_estimation[1])
-        z_diff[1] = np.arctan2(np.sin(z_diff[1]), np.cos(z_diff[1]))  # Normalize the angle in the observation difference to fall within the range [−π,π]        
+        # print(z_actual[0]-z_estimation[0])
+        print(z_actual[1]-z_estimation[1])        
+        z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
 
         # Line 15 of the EKF-SLAM algorithm
-        F = np.zeros((5, size))
-        F[0:3, 0:3] = np.eye(3)
-        F[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
+        Fx_j = np.zeros((5, size))
+        Fx_j[0:3, 0:3] = np.eye(3)
+        Fx_j[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
 
         # Line 16 of the EKF-SLAM algorithm
         H = (np.array([
-            [-np.sqrt(q) * delta_x, -np.sqrt(q) * delta_y, .0, np.sqrt(q) * delta_x, np.sqrt(q) * delta_y],
-            [delta_y, -delta_x, -q, -delta_y, delta_x]
-        ], dtype=float) / q) @ F
-        
+            [-np.sqrt(q) * delta[0], -np.sqrt(q) * delta[1], .0, np.sqrt(q) * delta[0], np.sqrt(q) * delta[1]],
+            [delta[1], -delta[0], -q, -delta[1], delta[0]]
+        ], dtype=float) / q) @ Fx_j
+
         # Line 17 of the EKF-SLAM algorithm
         # Notice that the Kalman gain is a matrix of size 3 by 3N + 3. This matrix is usually not sparse.        
         K = motion_model_covariance @ H.T @ np.linalg.inv(H @ motion_model_covariance @ H.T + Q)
+
         
-        # Line 18 of the EKF-SLAM algorithm
-        motion_model_mean += (K @ z_diff).T[0]
+        # Line 18 of the EKF-SLAM algorithm             
+        motion_model_mean += K @ z_diff
+
 
         # Line 19 of the EKF-SLAM algorithm
         motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance        
