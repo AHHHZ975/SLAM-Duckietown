@@ -77,6 +77,7 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 
 
 ## Extended Kalman Filter
+![Screenshot from 2024-12-20 18-09-33](https://github.com/user-attachments/assets/4dd33dd3-ee07-48f4-8103-ab388d64c816)
 
 
 ## Benchmarking using Vicon system
