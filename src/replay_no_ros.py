@@ -15,7 +15,10 @@ from collections import defaultdict
 MOTION_MODEL_VARIANCE = 0.1
 MEASUREMENT_MODEL_VARIANCE = 0.1
 
-ENABLE_MEASUREMENT_MODEL = 1
+ENABLE_MEASUREMENT_MODEL = 0
+ENABLE_CIRCULAR_INTERPOLATION = 0
+
+DELTA_TIME = 0.5 # second
 
 # Command line utility
 def parse_arguments():
@@ -58,8 +61,7 @@ def replay(dir):
     prev_timestemp = False
 
     acc_pos = [(0, 0)]
-
-    DELTA_TIME = 0.5 # 0.5 second
+    
 
     lines = file.readlines()
     timestamp_detectedTags_pair_list = []
@@ -305,36 +307,50 @@ def EKF_pose_estimation(
     Fx = np.hstack((np.eye(3), np.zeros((3, 2 * num_landmarks)))) # Define Fx (state-to-map matrix)
     previous_robot_orientation = motion_model_mean[2]
     
-    if abs(angular_displacement) <= 1e-2: # Linear movement 
+    if ENABLE_CIRCULAR_INTERPOLATION: # When we're using the circular interpolation
+        if abs(angular_displacement) <= 1e-2: # Linear movement 
 
+            motion_model_mean = motion_model_mean + Fx.T @ np.array([
+                linear_displacement * np.cos(previous_robot_orientation),
+                linear_displacement * np.sin(previous_robot_orientation),
+                0
+            ])     
+
+            # Jacobian
+            G = np.array([
+            [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
+            [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
+            [0, 0, 1]
+            ])
+        else: # Circular movement
+            linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
+            motion_model_mean = motion_model_mean + (Fx.T @ np.array([
+                -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
+                linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
+                angular_displacement
+            ]))        
+            motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
+
+            # Jacobian
+            G = np.array([  
+               [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
+               [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
+               [0, 0, 1]
+            ])
+    else: # When we're using the linear interpolation
         motion_model_mean = motion_model_mean + Fx.T @ np.array([
             linear_displacement * np.cos(previous_robot_orientation),
             linear_displacement * np.sin(previous_robot_orientation),
-            0
-        ])     
+            angular_displacement
+        ])
 
         # Jacobian
         G = np.array([
-           [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
-           [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
-           [0, 0, 1]
+        [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
+        [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
+        [0, 0, 1]
         ])
 
-    else: # Circular movement
-        linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
-        motion_model_mean = motion_model_mean + (Fx.T @ np.array([
-            -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
-            linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
-            angular_displacement
-        ]))        
-        motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
-
-        # Jacobian
-        G = np.array([  
-           [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
-           [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
-           [0, 0, 1]
-        ])
 
     # Noise covariance matrix for the motion model
     R = np.diag([MOTION_MODEL_VARIANCE**2, MOTION_MODEL_VARIANCE**2, (MOTION_MODEL_VARIANCE/2)**2])
@@ -370,7 +386,7 @@ def EKF_pose_estimation(
             z_diff = z_actual - z_estimation
             # print(z_actual[0]-z_estimation[0])
             # print(z_actual[1]-z_estimation[1])
-            z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]        
+            z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]
 
             # Line 15 of the EKF-SLAM algorithm
             Fx_j = np.zeros((5, size))
