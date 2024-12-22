@@ -124,6 +124,34 @@ The difference becomes more visible when increasing the delta time from 2 second
 ## The comparison with the ground truth data
 
 
+## Ablation studies
+#### Ablation on various amount of ```DELTA_TIME```
+
+
+<table>
+  <tr>
+    <th>0.05 sec</th>
+    <th>0.2 sec</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/0a39dabd-cda4-4ba2-b257-170b3538406e" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/61e44ae4-aa71-49d8-8b40-087aa7520fa8" alt="Image 1" width="600"/></td>  
+  </tr>
+  <tr>
+    <th>1 sec</th>
+    <th>5 sec</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/c5e69082-9db9-45e5-9e68-ec592bf0e5b6" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/59f12939-e677-4bc7-9fd5-ed7a453fc768" alt="Image 1" width="600"/></td>
+  </tr>
+</table>
+
+
+
+
+
+
 ## How to install
 
 ### 1. Clone the repository
