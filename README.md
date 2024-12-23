@@ -9,7 +9,7 @@ the Duckietown platform. Duckietown is a fun, hands-on way to learn about autono
 
 **Contributors**:
 
-- Amir Hossein Zamani (amirhossein.zamani@concordia.ca)
+- AmirHossein Zamani (amirhossein.zamani@mila.quebec)
 - Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca)
 - Kevin Lessard (kevin.lessard@umontreal.ca)
 
@@ -199,8 +199,6 @@ In both cases, the orange curve shows the prediction from EKF-SLAM motion model 
 
 The difference becomes more visible when increasing the delta time from 2 seconds to 5 seconds. Here is the results with the ```DELTA_TIME=5``` seconds.
 
-
-
 <table>
   <tr>
     <th>Pose estimation using a circular interpolation</th>
@@ -215,6 +213,7 @@ The difference becomes more visible when increasing the delta time from 2 second
 
 
 ## Ablation studies
+In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=2``` seconds.
 
 #### 1- Ablation on various amount of ```DELTA_TIME```
 <table>
@@ -226,6 +225,9 @@ The difference becomes more visible when increasing the delta time from 2 second
     <td><img src="https://github.com/user-attachments/assets/0a39dabd-cda4-4ba2-b257-170b3538406e" alt="Image 1" width="600"/></td>
     <td><img src="https://github.com/user-attachments/assets/61e44ae4-aa71-49d8-8b40-087aa7520fa8" alt="Image 1" width="600"/></td>  
   </tr>
+  
+  The difference becomes more visible when increasing the delta time from 2 seconds to 5 seconds. Here is the results with the ```DELTA_TIME=5``` seconds.
+  
   <tr>
     <th>1 sec</th>
     <th>5 sec</th>
