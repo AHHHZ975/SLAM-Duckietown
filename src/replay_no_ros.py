@@ -284,12 +284,18 @@ def EKF_pose_estimation(
     old_state_vector_size = len(motion_model_mean)
 
     if len(motion_model_mean) < new_state_vector_size:
-        motion_model_mean.resize(new_state_vector_size, refcheck=False)
-        motion_model_covariance.resize((new_state_vector_size, new_state_vector_size), refcheck=False)
+        new_motion_model_mean = np.zeros(new_state_vector_size)
+        new_motion_model_mean[0:old_state_vector_size] = motion_model_mean
+        motion_model_mean = new_motion_model_mean
+
+        new_motion_model_covariance = np.zeros((new_state_vector_size, new_state_vector_size))
+        new_motion_model_covariance[0:old_state_vector_size, 0:old_state_vector_size] = motion_model_covariance
+        motion_model_covariance = new_motion_model_covariance
         
         # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
-        for i in range(old_state_vector_size, new_state_vector_size):               
-            motion_model_covariance[i, i] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+        for i in range(old_state_vector_size, new_state_vector_size, 2):
+            motion_model_covariance[i, i] = 10000 #MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i+1, i+1] = 10000 #MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
             motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
