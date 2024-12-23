@@ -80,7 +80,7 @@ SLAM involves two main components:
 - **Pose Estimation (Odometry)**: This uses encoder data to estimate the Duckiebot's motion. However, odometry alone is prone to cumulative errors or drift over time.
 - **Landmarks**: External references, such as April tags, provide additional observations to correct and refine odometry-based pose estimation.
 
-**Solution**: Incorporate April tags as static landmarks in the environment to mitigate drift in motion estimation. By fusing landmark data with odometry, the overall accuracy of SLAM improves significantly.
+The solution is to incorporate April tags as static landmarks in the environment to mitigate drift in motion estimation. By fusing landmark data with odometry, the overall accuracy of SLAM improves significantly.
 
 <table>
   <tr>
@@ -139,9 +139,9 @@ The steps are visualized in the diagrams below, illustrating the coordinate tran
 The Extended Kalman Filter (EKF) is a recursive algorithm that fuses sensor data to estimate the Duckiebot’s pose (x,y,θ) and the positions of static landmarks in the environment. It operates in two main steps — **prediction and correction** — which run iteratively. In the prediction step, the motion model uses odometry data from wheel encoders to estimate the Duckiebot’s next state, projecting its pose forward in time. This predicted state, however, is prone to errors due to sensor noise and drift. To address this, the correction step integrates measurements from April tags.
 
 The final process involves:
-1) Prediction: Use the motion model to predict the Duckiebot's next state based on odometry.
-2) Correction: Incorporate April tag measurements to correct the prediction, reducing drift and improving accuracy.
-3) Covariance Update: Adjust the uncertainty in the state estimate to reflect the confidence in the data.
+1) **Prediction**: Use the motion model to predict the Duckiebot's next state based on odometry.
+2) **Correction**: Incorporate April tag measurements to correct the prediction, reducing drift and improving accuracy.
+3) **Covariance Update**: Adjust the uncertainty in the state estimate to reflect the confidence in the data.
 
 By iteratively combining the predictive and corrective steps, the EKF ensures accurate localization and mapping, even in the presence of noisy or incomplete sensor inputs. The visual below illustrates the prediction-correction workflow in the EKF, showing how odometry and April tag data are fused for reliable pose estimation.
 
@@ -290,7 +290,7 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
 
 
 # Reproducibility
-## How to install
+## Running the EKF-SLAM code on unzipped bag files
 Prerequisites:
 - Python 3.12
 - Linux or macOS
@@ -332,6 +332,9 @@ If you have trouble, refer to the [lib-dt-apriltags repository](https://github.c
 ```bash
 python3 src/replay_no_ros.py -d ./output/<choose_dir>
 ```
+
+## Running on the Duckiebot (online SLAM)
+
 
 # Reference
 
