@@ -363,7 +363,8 @@ def EKF_pose_estimation(
     F[0:3, 0:3] = np.eye(3)
 
     # Covariance update
-    G_F = F.T @ G @ F
+    G_F = np.eye(size)  
+    G_F[0:3, 0:3] = G 
     motion_model_covariance = G_F @ motion_model_covariance @ G_F.T + F.T @ R @ F
 
     ###########################################################################################################
