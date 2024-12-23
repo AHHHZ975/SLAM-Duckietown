@@ -4,6 +4,11 @@ The official repository for the SLAM-Duckietown - a project for the Autonomous V
 
 ## (Insert video preview)
 
+## Unzipping the bag files
+```bash
+
+```
+
 ## Running the EKF-SLAM code on unzipped bag files
 Prerequisites:
 - Python 3.12
