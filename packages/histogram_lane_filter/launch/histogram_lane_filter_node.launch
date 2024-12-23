@@ -1,0 +1,35 @@
+<launch>
+    <arg name="veh" default="$(env VEHICLE_NAME)" doc="Name of vehicle. ex: megaman"/>
+    <arg name="param_file_name" default="default" doc="Specify a param file. ex:megaman." />
+    <!-- <arg name="testing" default="false" doc="using for test purposes." /> -->
+
+    <arg name="pkg_name" value="histogram_lane_filter"/>
+    <arg name="node_name" default="histogram_lane_filter_node"/>
+    <arg name="traffic_mode" doc="Left/Right-hand traffic" default="RHT"/>
+
+    <group ns="$(arg veh)">
+        <remap from="~camera_info" to="camera_node/camera_info"/>
+        <remap from="~image/compressed" to="camera_node/image/compressed"/>
+  	    <remap from="~/left_wheel_encoder_driver_node/tick" to="left_wheel_encoder_driver_node/tick"/>
+  	    <remap from="~/right_wheel_encoder_driver_node/tick" to="right_wheel_encoder_driver_node/tick"/>
+
+        <node name="$(arg node_name)" pkg="$(arg pkg_name)" type="$(arg node_name).py" output="screen">
+            <rosparam command="load" file="$(find histogram_lane_filter)/config/$(arg node_name)/$(arg param_file_name).yaml"/>
+        </node>
+    </group>
+  	 <!-- Lane controller -->
+     <!-- <remap from="lane_controller_node/lane_pose" to="histogram_lane_filter_node/lane_pose"/>
+     <remap from="lane_controller_node/wheels_cmd" to="wheels_driver_node/wheels_cmd" />
+     <remap from="lane_controller_node/car_cmd" to="joy_mapper_node/car_cmd"/>
+     <remap from="wheels_driver_node/radius_limit" to="lane_controller_node/radius_limit" />
+     <include file="$(find lane_control)/launch/lane_controller_node.launch">
+          <arg name="veh" value="$(arg veh)"/>
+          <arg name="param_file_name" value="default"/>
+     </include> -->
+
+    <!-- Publications -->
+
+    <!-- Subscriptions -->
+
+
+</launch>
