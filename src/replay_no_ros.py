@@ -278,6 +278,9 @@ def EKF_pose_estimation(
             # We ignore ducplicate tags
             if tag.tag_id in IGNORE_TAGS:
                 continue
+
+            if (tag.pose_t[2][0] ** 2 + tag.pose_t[0][0]**2) > (1.5) ** 2:
+                continue
             
             # "TAG_TO_INDEX" is a dictionary with the "key" equal to the tag id
             # and the "value" equal to the index of that tag in the "detected_tags" list.
@@ -343,8 +346,8 @@ def EKF_pose_estimation(
         
         # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
         for i in range(old_state_vector_size, new_state_vector_size, 2):
-            motion_model_covariance[i, i] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
-            motion_model_covariance[i+1, i+1] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i, i] = 100 ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i+1, i+1] = 100 ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
             motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
