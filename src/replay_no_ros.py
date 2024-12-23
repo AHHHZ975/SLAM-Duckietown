@@ -12,16 +12,23 @@ import argparse
 import os
 from collections import defaultdict
 
-MOTION_MODEL_VARIANCE = 0.1
-MEASUREMENT_MODEL_VARIANCE = 1
-DELTA_TIME = 2 # second
-ENABLE_MEASUREMENT_MODEL = 1
-ENABLE_CIRCULAR_INTERPOLATION = 1
+MOTION_MODEL_VARIANCE = 100
+MEASUREMENT_MODEL_VARIANCE = 0.1
+DELTA_TIME = 0.2 # second
+
+ENABLE_MEASUREMENT_MODEL = True
+ENABLE_CIRCULAR_INTERPOLATION = False
+
+# Be warned, this option gives unprivileged information to the ekf algorithm
+# (a.k.a, the ekf algorithm is aware of the ground truth position of the tags)
+ENABLE_GOD_EKF = True
+# The 'secret key' is the correspondance between the tag numbers and the positions on the map
+GOD_SECRET_KEY = [80, 44, 41, 26, 110, 106, 101, 31, 65, 23, 232, 54]
+DISABLE_MOTION_MODEL = True # This option disables the motion model
 
 
 
 image_list = []
-TAG_INDEX = {}
 IGNORE_TAGS = []
 # IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
 
@@ -68,7 +75,8 @@ def replay(dir):
     prev_timestemp = False
 
     acc_pos = [(0, 0)]
-    
+
+    TAG_INDEX = {}
 
     lines = file.readlines()
     timestamp_detectedTags_pair_list = []
@@ -117,6 +125,26 @@ def replay(dir):
 
             # Do not look at the following line. It's not good practice, and mostly a quick and dirty way to do it.
             list_of_landmarks = eval(line[second_coma+1:])
+
+            if ENABLE_GOD_EKF:
+
+                new_size = len(list_of_landmarks) * 2 + 3
+
+                # Sets the motion model mean to the ground truth values
+                new_motion_model_mean = np.zeros(new_size)
+                new_motion_model_mean[0:2] = motion_model_mean[0:2]
+                for i, landmark in enumerate(list_of_landmarks):
+                    new_motion_model_mean[3+i*2] = landmark[0]
+                    new_motion_model_mean[3+i*2+1] = landmark[1]
+                motion_model_mean = new_motion_model_mean
+
+                # Set the variance of all tags to zero
+                new_motion_model_covariance = np.zeros((new_size, new_size))
+                new_motion_model_covariance[0:3, 0:3] = motion_model_covariance
+                motion_model_covariance = new_motion_model_covariance
+
+                TAG_INDEX = {GOD_SECRET_KEY[i]:i for i in range((new_size-3)//2)}
+
 
         elif event == "camera_intrinsis":
             first_coma = line.find(",")
@@ -178,7 +206,8 @@ def replay(dir):
                 motion_model_mean,
                 motion_model_covariance,
                 DELTA_TIME,
-                timestamp_detectedTags_pair_list
+                timestamp_detectedTags_pair_list,
+                TAG_INDEX
             )
             timestamp_detectedTags_pair_list.clear()
 
@@ -189,7 +218,7 @@ def replay(dir):
             # Displaying the robot's trajectory
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
 
-            plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_mean, motion_model_covariance, measured_tags)
+            plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_mean, motion_model_covariance, measured_tags, TAG_INDEX)
             plt.pause(0.05)            
 
 def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
@@ -217,8 +246,9 @@ def EKF_pose_estimation(
     motion_model_mean: np.ndarray,
     motion_model_covariance: np.ndarray,
     delta_t: float,
-    timestamp_detectedTags_pair_list : list
-) -> Tuple[float, float, float]:
+    timestamp_detectedTags_pair_list : list,
+    TAG_INDEX
+    ) -> Tuple[float, float, float]:
     
 
     detected_tags = defaultdict(list)
@@ -294,8 +324,8 @@ def EKF_pose_estimation(
         
         # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
         for i in range(old_state_vector_size, new_state_vector_size, 2):
-            motion_model_covariance[i, i] = 10000 #MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
-            motion_model_covariance[i+1, i+1] = 10000 #MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i, i] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i+1, i+1] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
             motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
@@ -310,7 +340,10 @@ def EKF_pose_estimation(
     Fx = np.hstack((np.eye(3), np.zeros((3, 2 * num_landmarks)))) # Define Fx (state-to-map matrix)
     previous_robot_orientation = motion_model_mean[2]
     
-    if ENABLE_CIRCULAR_INTERPOLATION: # When we're using the circular interpolation
+    if DISABLE_MOTION_MODEL:
+        G = np.eye(3)
+
+    elif ENABLE_CIRCULAR_INTERPOLATION: # When we're using the circular interpolation
         if abs(angular_displacement) <= 1e-2: # Linear movement 
 
             motion_model_mean = motion_model_mean + Fx.T @ np.array([
@@ -434,7 +467,7 @@ def displacement(
 
     return angular_displacement, linear_displacement
 
-def plot_path(vertices, ground_truth_vertices, ground_truth_landmarks, model_mean, model_covariance, measured_tags):
+def plot_path(vertices, ground_truth_vertices, ground_truth_landmarks, model_mean, model_covariance, measured_tags, TAG_INDEX):
     from matplotlib import rcParams
 
 
