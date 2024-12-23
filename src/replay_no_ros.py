@@ -14,7 +14,7 @@ from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
 MEASUREMENT_MODEL_VARIANCE = 1
-DELTA_TIME = 0.05 # second
+DELTA_TIME = 2 # second
 ENABLE_MEASUREMENT_MODEL = 1
 ENABLE_CIRCULAR_INTERPOLATION = 1
 
@@ -72,7 +72,7 @@ def replay(dir):
 
     lines = file.readlines()
     timestamp_detectedTags_pair_list = []
-    tagss = {}
+    measured_tags = {}
     ground_truth_positions = []
     list_of_landmarks = False
 
@@ -141,6 +141,7 @@ def replay(dir):
             #  camera_params is then used in the dt-apriltags library which need the data in this format [f_x, f_y, t_x, t_y]. See dt-apriltag repo for more information.
             K = camera_intrinsics[1]
             camera_params = [K[0], K[4],K[2],K[5]]
+            #breakpoint()
 
         else:
             print("Unknown event")
@@ -171,7 +172,7 @@ def replay(dir):
                 delta_rphi
             )
 
-            motion_model_mean, motion_model_covariance, tags = EKF_pose_estimation(
+            motion_model_mean, motion_model_covariance, measured_tags = EKF_pose_estimation(
                 angular_displacement,
                 linear_displacement,
                 motion_model_mean,
@@ -181,12 +182,14 @@ def replay(dir):
             )
             timestamp_detectedTags_pair_list.clear()
 
-            tagss = tagss | tags
+            # Uncomment the following line if you want the measured tags to stay
+            #measured_tags = measured_tags | tags
 
 
             # Displaying the robot's trajectory
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
-            plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_covariance[0,0], motion_model_covariance[1,1], tagss)
+
+            plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_mean, motion_model_covariance, measured_tags)
             plt.pause(0.05)            
 
 def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
@@ -239,8 +242,6 @@ def EKF_pose_estimation(
             detected_tags[TAG_INDEX[tag.tag_id]].append([tag.pose_R, tag.pose_t, tag.pose_err])
 
 
-
-
     # Average each detected tag (maybe not a good way to do it)
     # What we are doing here is that, during a constant delta time,
     # for every tag we are looking for the occasions that the camera
@@ -288,7 +289,7 @@ def EKF_pose_estimation(
         
         # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
         for i in range(old_state_vector_size, new_state_vector_size):               
-            motion_model_covariance[i, i] = 10000 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i, i] = MEASUREMENT_MODEL_VARIANCE ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
             motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
@@ -402,6 +403,7 @@ def EKF_pose_estimation(
 
             # Line 18 of the EKF-SLAM algorithm             
             motion_model_mean += K @ z_diff
+            #breakpoint()
 
             # Line 19 of the EKF-SLAM algorithm
             motion_model_covariance = (np.eye(size) - K @ H) @ motion_model_covariance
@@ -423,44 +425,67 @@ def displacement(
 
     return angular_displacement, linear_displacement
 
-def plot_path(vertices, ground_truth, landmarks, sigma_x, sigma_y, tags):    
+def plot_path(vertices, ground_truth_vertices, ground_truth_landmarks, model_mean, model_covariance, measured_tags):
     from matplotlib import rcParams
+
 
     # Set global font size
     rcParams.update({'font.size': 18})  # Increase the global font size to 18
 
-    ax_path.clear()
+    ax_path.clear() # Reset canvas
 
     # Create the Path object
     path = Path(vertices)
-    ground_truth_path = Path(ground_truth)
+    ground_truth_path = Path(ground_truth_vertices)
 
-    max_x = max([x for x, y in vertices])
-    max_y = max([y for x, y in vertices])
-    min_x = min([x for x, y in vertices])
-    min_y = min([y for x, y in vertices])
+    # Determine the size of the canvas
+    max_x = max([x for x, y in vertices] + [0.5])
+    max_y = max([y for x, y in vertices] + [1])
+    min_x = min([x for x, y in vertices] + [-0.5])
+    min_y = min([y for x, y in vertices] + [0])
 
     # Create a PathPatch
     patch = patches.PathPatch(path, facecolor="none", edgecolor='orange', lw=5, label="Estimated Robot Pose")
-    gt_patch = patches.PathPatch(ground_truth_path, facecolor="none", edgecolor='purple', lw=2, label="Ground Truth Robot Pose")
+    gt_patch = patches.PathPatch(ground_truth_path, facecolor="none", edgecolor='navy', lw=2, label="Ground Truth Robot Pose")
 
     # Add patches to the axis
     ax_path.add_patch(patch)
     ax_path.add_patch(gt_patch)
 
     # Plot landmarks if present
-    if landmarks:
-        for land in landmarks:
-            ax_path.plot(land[0], land[1], 'ro', color="red", label="Ground Truth Landmark Pose")
+    if ground_truth_landmarks:
+        for land in ground_truth_landmarks:
+            ax_path.plot(land[0], land[1], 'ro', color="navy", label="Ground Truth Landmark Pose")
 
-    # Add variance ellipse
-    ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='red', facecolor='none', label="Variance Ellipse")
+
+    # Add variance ellipse around the robot, and a dot for the robot
+    sigma_x = model_covariance[0][0]
+    sigma_y = model_covariance[1][1]
+    ellipse = patches.Ellipse((vertices[-1][0], vertices[-1][1]), sigma_x, sigma_y, edgecolor='gold', facecolor='none', label="Variance Ellipse")
     ax_path.add_patch(ellipse)
+    ax_path.plot(vertices[-1][0], vertices[-1][1], 'rs', color='darkred')
 
-    # Plot tags and their text
-    for tag_id, tag in tags.items():
-        ax_path.plot(tag[0], tag[1], 'rs', color=get_color(tag[3]), label="Predicted Landmark Pose")
-        ax_path.text(tag[0], tag[1], str(tag[3]), color=get_color(tag[3]), fontsize=20)  # Increase text font size for tags
+
+    for i in range(3, len(model_mean), 2):
+        tag_x = model_mean[i]
+        tag_y = model_mean[i+1]
+        tag_vx = model_covariance[i][i]
+        tag_vy = model_covariance[i+1][i+1]
+        
+        INV_TAG_TO_INDEX = {v: k for k, v in TAG_INDEX.items()}
+        tag_index = INV_TAG_TO_INDEX[(i-3)//2]
+        
+        ax_path.plot(tag_x, tag_y, 'ro', color=get_color(tag_index))
+        ellipse = patches.Ellipse((tag_x, tag_y), tag_vx, tag_vy, edgecolor='gold', facecolor='none', label="Variance Ellipse")
+        ax_path.add_patch(ellipse)
+        ax_path.text(tag_x, tag_y, str(tag_index), color=get_color(tag_index), fontsize=10)  # Increase text font size for tags
+
+    # Plot measured tags and their text
+    for tag_id, tag in measured_tags.items():
+        ax_path.plot(tag[0], tag[1], 'rs', color='green', label="Measurement from AprilTags")
+        ax_path.plot([vertices[-1][0], tag[0]], [vertices[-1][1], tag[1]], 'k-')
+        #ax_path.text(tag[0], tag[1], str(tag[3]), color='green', fontsize=10)  # Increase text font size for tags
+
 
     # Set limits and aspect ratio
     ax_path.set_xlim(min_x - 1, max_x + 1)
