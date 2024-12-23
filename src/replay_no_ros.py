@@ -375,20 +375,22 @@ def EKF_pose_estimation(
             # Line 6 of the EKF-SLAM algorithm
             Q = np.diag([MEASUREMENT_MODEL_VARIANCE**2, MEASUREMENT_MODEL_VARIANCE**2]) # Noise covariance matrix for the measurement model
 
+            tag_index = 3 + 2 * tag_id
+
             # Line 12 of the EKF-SLAM algorithm 
-            delta = tag_pose[0:2] - motion_model_mean[0:2]     
+            delta = motion_model_mean[tag_index:tag_index+2] - motion_model_mean[0:2]     
             
             # Line 13 of the EKF-SLAM algorithm
             q = delta.T @ delta
 
-            range_tag, bearing_tag = tag_pose[4:6]
             # Line 14 of the EKF-SLAM algorithm
+            range_tag, bearing_tag = tag_pose[4:6]
             z_actual = np.array([range_tag, bearing_tag]) # Actual observation from sensors
             z_estimation = np.array([ # The estimation of observation
                 np.sqrt(q),
                 np.arctan2(delta[1], delta[0]) - motion_model_mean[2]]
             )
-            z_diff = z_actual - z_estimation
+            z_diff = z_actual - z_estimation 
             # print(z_actual[0]-z_estimation[0])
             # print(z_actual[1]-z_estimation[1])
             z_diff[1] = (z_diff[1] + np.pi) % (2 * np.pi) - np.pi # Normalize the angle in the observation difference to fall within the range [−π,π]
@@ -396,7 +398,7 @@ def EKF_pose_estimation(
             # Line 15 of the EKF-SLAM algorithm
             Fx_j = np.zeros((5, size))
             Fx_j[0:3, 0:3] = np.eye(3)
-            Fx_j[3:5, 3 + 2 * tag_id:3 + 2 * tag_id + 2] = np.eye(2)
+            Fx_j[3:5, tag_index:tag_index + 2] = np.eye(2)
 
             # Line 16 of the EKF-SLAM algorithm
             H = (np.array([
