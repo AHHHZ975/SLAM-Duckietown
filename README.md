@@ -68,9 +68,8 @@ the Duckietown platform. Duckietown is a fun, hands-on way to learn about autono
 4. [Method](#method)
 5. [Results](#results)
 6. [Conclusion](#conclusion)
-7. [Reproducibility](#reproducibility)
-8. [Reference](#reference)
-9. [Annex](#annex)
+7. [Reference](#reference)
+8. [Annex](#annex)
 
 # Introduction
 
@@ -93,13 +92,21 @@ To achieve these objectives, we propose an Extended Kalman Filter (EKF) SLAM alg
 
 This project focuses on the development and implementation of an Extended Kalman Filter (EKF) SLAM algorithm. The proposed approach integrates sensor data from wheel encoders and April tags to improve localization and mapping. Figure 1 illustrates the overall setup and methodology.
 
-![image](https://github.com/user-attachments/assets/eed5114c-5de5-49d3-a039-1061505add9e)
+An overview of the project workflow, including the key components of the SLAM pipeline, is presented in the figure below. 
 
-An overview of the project workflow, including the key components of the SLAM pipeline, is presented in Figure 2.
+In stage 1, the process begins by separating the SLAM task into two main components: pose estimation (odometry) and landmark detection (April tags). The Duckiebot collects data from wheel encoders and camera images, which are used to estimate its motion and detect April tags in the environment. 
+
+In stage 2, the EKF-SLAM algorithm fuses these data sources to estimate the Duckiebot's pose and the positions of static landmarks in the environment. The resulting trajectory and map provide valuable insights into the Duckiebot's localization and mapping capabilities.
 
 ![image](https://github.com/user-attachments/assets/433160b0-0fb7-46d8-bc35-9bc2dcd8b9d9)
 
+## Primary Contributions
 
+This project demonstrated that the EKF-SLAM algorithm significantly enhances the Duckiebot's localization and mapping capabilities by combining odometry data with April tag detections. The primary contributions are as follows:
+
+1) **EKF-SLAM Implementation**: Developed and implemented an EKF-SLAM algorithm to improve pose estimation within a small-scale Duckietown environment, using offline bag files generated from Duckiebot movements controlled via joystick.
+2) **Accuracy Evaluation**: Conducted a detailed comparison against ground truth data collected using the Vicon system to assess the accuracy and robustness of the EKF-SLAM algorithm.
+3) **ROS Package Development**: Initiated the creation of a ROS package to enable real-time online experiments, paving the way for live SLAM performance evaluation on the Duckiebot.
 
 # Related Work
 
