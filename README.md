@@ -5,6 +5,7 @@ The official repository for the SLAM-Duckietown - a project for the Autonomous V
 ## (Insert video preview)
 
 ## Unzipping the bag files
+Here is the [link](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link) to the bag files.
 ```bash
 
 ```
