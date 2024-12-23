@@ -12,19 +12,21 @@ import argparse
 import os
 from collections import defaultdict
 
-MOTION_MODEL_VARIANCE = 100
-MEASUREMENT_MODEL_VARIANCE = 0.1
-DELTA_TIME = 0.2 # second
+MOTION_MODEL_VARIANCE = 0.1
+MEASUREMENT_MODEL_VARIANCE = 0.2
+DELTA_TIME = 0.5 # second
 
 ENABLE_MEASUREMENT_MODEL = True
 ENABLE_CIRCULAR_INTERPOLATION = False
 
-# Be warned, this option gives unprivileged information to the ekf algorithm
+# Be warned, this option gives unprivileged information to the ekf algorithmq
 # (a.k.a, the ekf algorithm is aware of the ground truth position of the tags)
-ENABLE_GOD_EKF = True
+ENABLE_GOD_EKF = False
 # The 'secret key' is the correspondance between the tag numbers and the positions on the map
 GOD_SECRET_KEY = [80, 44, 41, 26, 110, 106, 101, 31, 65, 23, 232, 54]
-DISABLE_MOTION_MODEL = True # This option disables the motion model
+DISABLE_MOTION_MODEL = False # This option disables the motion model
+
+ENABLE_FAST_MODE = False # (may be less precise)
 
 
 
@@ -113,11 +115,14 @@ def replay(dir):
 
         elif event == "image":
             img_path = os.path.join(dir, data)
-            img = load_grayscale(img_path)
-            detected_april_tags = detect_tags(img, camera_params)
-            timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
-            bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
-            visualize_bounding_boxes(img, bounding_boxes)
+            if ENABLE_FAST_MODE:
+                image_list.append((timestemp, img_path))
+            else:
+                img = load_grayscale(img_path)
+                detected_april_tags = detect_tags(img, camera_params)
+                timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
+                bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
+                visualize_bounding_boxes(img, bounding_boxes)
 
         elif event == "landmarks":
             first_coma = line.find(",")
@@ -200,6 +205,20 @@ def replay(dir):
                 delta_rphi
             )
 
+        
+            # Only process the last 5 images in "fast mode"
+            if ENABLE_FAST_MODE:
+                timestamp_detectedTags_pair_list.clear()
+                last_images = image_list[-5:]
+                for img_pair in last_images:
+                    img_path = img_pair[1]
+                    timestamp = img_pair[0]
+                    img = load_grayscale(img_path)
+                    detected_april_tags = detect_tags(img, camera_params)
+                    timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
+                    bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
+                    visualize_bounding_boxes(img, bounding_boxes)
+
             motion_model_mean, motion_model_covariance, measured_tags = EKF_pose_estimation(
                 angular_displacement,
                 linear_displacement,
@@ -219,7 +238,7 @@ def replay(dir):
             acc_pos.append((motion_model_mean[0], motion_model_mean[1]))
 
             plot_path(acc_pos, ground_truth_positions, list_of_landmarks, motion_model_mean, motion_model_covariance, measured_tags, TAG_INDEX)
-            plt.pause(0.05)            
+            plt.pause(0.00001)            
 
 def delta_phi(ticks: int, prev_ticks: int, resolution: int) -> float:
     """
@@ -249,7 +268,7 @@ def EKF_pose_estimation(
     timestamp_detectedTags_pair_list : list,
     TAG_INDEX
     ) -> Tuple[float, float, float]:
-    
+
 
     detected_tags = defaultdict(list)
     for timestamp_detectedTags_pair in timestamp_detectedTags_pair_list:
