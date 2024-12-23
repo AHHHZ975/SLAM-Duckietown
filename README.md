@@ -91,6 +91,20 @@ Contributors: AmirHossein Zamani, Léonard Oest O’Leary, and Kevin Lessard.
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
 [![Watch the video](readme_materials/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
 
+## The comparison of Extended Kalman Filter SLAM (EKF-SLAM) results with the ground truth data
+
+<table>
+  <tr>
+    <th>EKF-SLAM motion model (without measurement model)</th>
+    <th>EKF-SLAM full version (motion+measurement model)</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/2e6e31eb-042a-4d8e-b112-f1225ff3c3f4" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/81e9e362-4eb5-461b-b8c6-cfb9e8371199" alt="Image 1" width="600"/></td>    
+  </tr>
+</table>
+
+
 ## The effect of different interpolation techniques on the pose trajectory
 
 In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=2``` seconds.
@@ -121,7 +135,6 @@ The difference becomes more visible when increasing the delta time from 2 second
   </tr>
 </table>
 
-## The comparison with the ground truth data
 
 
 ## Ablation studies
