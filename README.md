@@ -2,9 +2,58 @@
 
 The official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
 
+## (Insert video preview)
+
+## Running the EKF-SLAM code on unzipped bag files
+Prerequisites:
+- Python 3.12
+- Linux or macOS
+
+### 1. Clone the repository and cd
+```bash
+git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
+cd SLAM-Duckietown
+```
+
+### 2. Install dependencies (Lower than python 3.13)
+
+**(optional) Create a virtual environment**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Install the required packages**
+```bash
+pip install -r requirements.txt
+```
+
+**Install dt-apriltags https://github.com/duckietown/lib-dt-apriltags**
+On Ubuntu:
+```bash
+pip install dt-apriltags
+```
+
+On macOS (or to have the latest version):
+```bash
+``chmod +x ./scripts/install_dt_apriltags
+``./scripts/install_dt_apriltags
+pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the script
+```
+If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)
+
+### 3. Run the code. If you don't want to run through ros, you can run the following command:
+```bash
+python3 src/replay_no_ros.py -d ./output/<choose_dir>
+```
+
+## Running on the Duckiebot (online SLAM)
+... (if possible)
+
+## The SLAM-Duckietown Research Project
 **Abstract**
 
-TThis project implements an Extended Kalman Filter (EKF) SLAM algorithm for 
+This project implements an Extended Kalman Filter (EKF) SLAM algorithm for 
 the Duckietown platform. Duckietown is a fun, hands-on way to learn about autonomous robotics using small-scale robots (Duckiebots) in a miniature city. Our goal is to estimate the Duckiebot’s position and the locations of static landmarks using data from wheel encoders and April tags. By combining odometry with landmarks, we improve localization and reduce drift over time. This work contributes to advancing localization and mapping capabilities in Duckietown. We explored offline SLAM, focusing on key tasks like odometry estimation, April tag detection, and pose estimation. We also created a ROS package for online experiments on the Duckiebot. The results demonstrate the effectiveness of the EKF-SLAM algorithm in improving the Duckiebot's localization and mapping performance that is proportional to the quality of the April tag detection and the quantity of the landmarks in the environment. We hope that this code can help build a more robust and accurate SLAM system for the Duckietown platform.
 
 **Contributors**:
@@ -12,7 +61,6 @@ the Duckietown platform. Duckietown is a fun, hands-on way to learn about autono
 - AmirHossein Zamani (amirhossein.zamani@mila.quebec)
 - Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca)
 - Kevin Lessard (kevin.lessard@umontreal.ca)
-
 
 # Table of Contents
 1. [Introduction](#introduction)
@@ -106,6 +154,9 @@ The pose estimation process relies on a combination of odometry and April tag de
 
 ## An overview of april tags detection steps
 
+<details>
+<summary>Overview of the april tags detection step</summary>
+</details>
 April Tags play a key role in landmark-based SLAM by providing reliable fiducial markers for localization and mapping. The detection process involves the following steps:
 1) **Image Preprocessing**: The input image is converted to grayscale, and adaptive thresholding is applied to enhance contrast between the tag and the background. The image is divided into tiles, and local extrema are computed to binarize the image, effectively isolating regions of interest.
 2) **Segmentation**: Edges are identified by detecting pixels with significant intensity changes. A union-find algorithm is then used to cluster black and white pixels into distinct regions.
@@ -283,57 +334,6 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
   </tr>
   <tr>
 </table>
-
-
-
-# Conclusion
-
-
-# Reproducibility
-## Running the EKF-SLAM code on unzipped bag files
-Prerequisites:
-- Python 3.12
-- Linux or macOS
-
-### 1. Clone the repository and cd
-```bash
-git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
-cd SLAM-Duckietown
-```
-
-### 2. Install dependencies (Lower than python 3.13)
-
-**(optional) Create a virtual environment**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-**Install the required packages**
-```bash
-pip install -r requirements.txt
-```
-
-**Install dt-apriltags https://github.com/duckietown/lib-dt-apriltags**
-On Ubuntu:
-```bash
-pip install dt-apriltags
-```
-
-On macOS (or to have the latest version):
-```bash
-``chmod +x ./scripts/install_dt_apriltags
-``./scripts/install_dt_apriltags
-pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the script
-```
-If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)
-
-### 3. Run the code. If you don't want to run through ros, you can run the following command:
-```bash
-python3 src/replay_no_ros.py -d ./output/<choose_dir>
-```
-
-## Running on the Duckiebot (online SLAM)
 
 
 # Reference
