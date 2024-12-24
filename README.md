@@ -43,8 +43,6 @@ Prerequisites:
 - Python 3.12
 - Linux or macOS
 
-### Running the EKF-SLAM code on unzipped bag files
-
 ### 1. Clone the repository and cd
 ```bash
 git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
