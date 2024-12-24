@@ -339,20 +339,20 @@ In both cases, the orange curve shows the prediction from EKF-SLAM motion model 
 This study is done when the ```MOTION_MODEL_VARIANCE``` is kept fixed at the value of 0.1.
 <table>
   <tr>
-    <th>MEASUREMENT_MODEL_VARIANCE=0.01</th>
+    <th>MEASUREMENT_MODEL_VARIANCE=0.05</th>
     <th>MEASUREMENT_MODEL_VARIANCE=0.2</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/a2112685-4cfa-4446-aeb0-9fe239be589e" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/6b778280-333c-49dd-bb5b-48aaa1cedff7" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/1ed932e8-e9b7-41fa-b2e6-219aee980a93" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/81bf0dc4-726b-4a23-9045-7ae8c4de9199" alt="Image 1" width="600"/></td>
   </tr>
   <tr>
-    <th>MEASUREMENT_MODEL_VARIANCE=1</th>
-    <th>MEASUREMENT_MODEL_VARIANCE=10</th>
+    <th>MEASUREMENT_MODEL_VARIANCE=0.7</th>
+    <th>MEASUREMENT_MODEL_VARIANCE=1.5</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/86889e8d-2f44-49cb-8e78-dbeed6272f0c" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/b6397e00-d8bf-4132-9425-64e07df2f10f" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/561e0041-c073-40c3-be7b-9156ce09b8a8" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/12a42350-a2ef-4a9a-a8b3-eecdff54f75c" alt="Image 1" width="600"/></td>
   </tr>
   <tr>
 </table>
