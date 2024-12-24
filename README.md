@@ -250,7 +250,7 @@ The procedure to collect this data was as following:
 1. We prepared all landmarks and robot to have tracking balls on them
 2. We started a recording of the robot odometry and camera using [rosbag](https://wiki.ros.org/rosbag)
 3. At the same time, we start the recording of the motion capture system
-4. We collected all files (bags, csv from tracking) in the repository and synchronize them (see [decode_bag_file.py](https://github.com/AHHHZ975/SLAM-Duckietown/blob/main/scripts/decode_bag_file.py) for implementation). Timestemp on both recordings was used to synchronize them and the ground truth data was reajusted to the duckiebot position and angle frame.
+4. We collected all files (bags, csv from tracking) in the repository and synchronize them (see [decode_bag_file.py](https://github.com/AHHHZ975/SLAM-Duckietown/blob/main/scripts/decode_bag_file.py) for implementation). Timestemp on both recordings was used to find the starting time of the robot and the ground truth data was reajusted to the duckiebot position and angle frame. Some recordings had a significant delay between the bag file and the ground truth CSV files, due to time desynchronization on the computer running the vicon system. In these cases, we resynchronized them by offsetting the timestemp by the number of seconds that differed between the computers.
 
 # Results
 
