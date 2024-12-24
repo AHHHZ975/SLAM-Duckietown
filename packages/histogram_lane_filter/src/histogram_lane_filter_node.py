@@ -108,24 +108,12 @@ class HistogramLaneFilterNode(DTROS):
             queue_size=1,
         )
 
-        # Publishers
-        self.pub_lane_pose = rospy.Publisher(
-            "~lane_pose", LanePose, queue_size=1, dt_topic_type=TopicType.PERCEPTION
+        self.pub_detection_img = rospy.Publisher(
+            "~detection_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
         )
-        self.pub_belief_img = rospy.Publisher(
-            "~belief_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
+        self.pub_path_img = rospy.Publisher(
+            "~path_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
         )
-        self.pub_segments_img = rospy.Publisher(
-            "~segments_img", Image, queue_size=1, dt_topic_type=TopicType.DEBUG
-        )
-        self.pub_projected_segments_img = rospy.Publisher(
-            "~projected_segments_img",
-            Image,
-            queue_size=1,
-            dt_topic_type=TopicType.DEBUG,
-        )
-        self.pub_detection_img = rospy.Publisher("~detection_img", Image, queue_size=1)
-        self.pub_path_img = rospy.Publisher("~path_img", Image, queue_size=1)
 
         # Predict timer
         rospy.Timer(rospy.Duration(1 / self._predict_freq), self.cbPredict)
@@ -206,9 +194,10 @@ class HistogramLaneFilterNode(DTROS):
         self.prev_time = current_time
 
         # EKF-SLAM
-        self.mu, self.Sigma, tags = estimate_pose(
-            angular_disp, linear_disp, self.mu, self.Sigma, delta_t, self.detections
+        self.mu, self.Sigma, tags = EKF_pose_estimation(
+            angular_disp, linear_disp, self.mu, self.Sigma, delta_t, self.detections, TAG_INDEX={}
         )
+
         self.loginfo(f"EKF Pose: mu={self.mu}, Sigma={self.Sigma}")
         self.loginfo(f"New tags from estimate_pose: {tags}")
 
@@ -263,7 +252,6 @@ class HistogramLaneFilterNode(DTROS):
             for x in detected_tags
         ]
         self.visualize_bounding_boxes_opencv(img_gray, bounding_boxes)
-        self.publishEstimate(img_msg.header.stamp)
 
     def visualize_bounding_boxes_opencv(self, image: np.ndarray, bounding_boxes: list):
         # Convert to BGR if grayscale
@@ -291,19 +279,6 @@ class HistogramLaneFilterNode(DTROS):
 
         img_msg = self.bridge.cv2_to_imgmsg(img_bgr, encoding="bgr8")
         self.pub_detection_img.publish(img_msg)
-
-    def publishEstimate(self, stamp):
-        d_max, phi_max = self.filter.getEstimate()
-        lanePose = LanePose()
-        lanePose.header.stamp = stamp
-        lanePose.d = d_max
-        lanePose.phi = phi_max
-        lanePose.in_lane = True
-        lanePose.status = lanePose.NORMAL
-        self.pub_lane_pose.publish(lanePose)
-
-        if self._debug:
-            self.debugOutput()
 
     def debugOutput(self):
         # Belief image
