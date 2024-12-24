@@ -280,7 +280,7 @@ The alignment between the observed and estimated tag positions validates the rob
 
 ## The effect of different interpolation techniques on the pose trajectory
 
-In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=2``` seconds.
+In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=0.7``` seconds.
 
 <table>
   <tr>
@@ -288,12 +288,12 @@ In both cases, the orange curve shows the prediction from EKF-SLAM motion model 
     <th>Pose estimation using a linear interpolation</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/d1f55d74-4531-4e06-acba-326ac7768c71" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/07f40984-d02b-44ff-bdcd-14aa7386656b" alt="Image 1" width="600"/></td>    
+    <td><img src="https://github.com/user-attachments/assets/5a9bfacd-be05-4214-b092-e59fb718a7f1" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/a97dae39-bb41-4edf-97f9-519d6f9586ea" alt="Image 1" width="600"/></td>    
   </tr>
 </table>
 
-The difference becomes more visible when increasing the delta time from 2 seconds to 5 seconds. Here is the results with the ```DELTA_TIME=5``` seconds.
+The difference becomes more visible when increasing the delta time from 0.7 second to 2 seconds. Here is the results with the ```DELTA_TIME=2``` seconds.
 
 <table>
   <tr>
@@ -301,8 +301,8 @@ The difference becomes more visible when increasing the delta time from 2 second
     <th>Pose estimation using a linear interpolation</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/6bec11d0-0c0c-4e30-b2ae-98ccde7de3a0" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/e0b748ed-436a-4c90-a15f-428f785ca7d2" alt="Image 1" width="600"/></td>    
+    <td><img src="https://github.com/user-attachments/assets/67c756cb-5d1c-4708-bb43-3f9b126b34c1" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/10f99306-697e-410f-9272-8346d5a3f8d8" alt="Image 1" width="600"/></td>    
   </tr>
 </table>
 
