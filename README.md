@@ -251,14 +251,15 @@ The procedure to collect this data was as following:
 # Results
 
 ## Offline April Tags Detection and Odometry Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
-[![Watch the video](assets/Odometry_ApriltagsDetection.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+https://github.com/user-attachments/assets/3858c440-4d17-4229-b8aa-2145974c0ea6
 
 The first video showcases the combined process of April tag detection and odometry-based trajectory estimation. Using its fisheye camera, the Duckiebot identifies April tags in the environment through grayscale conversion and segmentation. The detected tags serve as fixed landmarks that correct the Duckiebot's trajectory, which is initially derived from odometry data collected via wheel encoders.
 
 This integration reduces the cumulative drift often associated with odometry-only estimation. The video highlights how the SLAM system uses these external landmarks to refine pose accuracy, ensuring more reliable localization in the mapped environment.
 
 ## Offline April Tags' Position Estimation ([video link](https://www.youtube.com/watch?v=-cfKAiPUpaM))
-[![Watch the video](assets/Apriltag_pose_estimation.gif)](https://www.youtube.com/watch?v=KhHEgYVbUk4)
+
+https://github.com/user-attachments/assets/2ac35610-2712-431d-a631-2e3538d9de20
 
 The second video demonstrates the estimation of April tags' positions relative to the Duckiebot. Detected 2D tag coordinates from the camera feed are matched with their known 3D coordinates using a Perspective-n-Point (PnP) solver. This process computes the transformation matrix, enabling precise estimation of the tags’ positions in the Duckiebot’s frame of reference.
 
