@@ -42,12 +42,24 @@ We recommend that you run the code with the recorded data.
 Prerequisites:
 - Python 3.12
 - Linux or macOS
+- [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line
 
 ### 1. Clone the repository and cd
 ```bash
 git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
 cd SLAM-Duckietown
 ```
+
+### 2. Decompress the bag files into a readable format
+```bash
+dts start_gui_tools --mount $(pwd):/workdir
+cd /workdir
+./scripts/decompress_bag_file ./bags/<choose .bag file>
+```
+
+Alternatively, you can replace the last command with `python3 ./scripts/decode_bag_file.py ...`. See `python3 ./scripts/decode_bag_file.py --help` for options.
+
+
 
 ### 2. Install dependencies (Lower than python 3.13)
 
@@ -81,30 +93,13 @@ If you have trouble, refer to the [lib-dt-apriltags repository](https://github.c
 python3 src/replay_no_ros.py -d ./output/<choose_dir>
 ```
 
-### 4. (optional) Downloading and decoding more test files
-Prerequisite:
-- [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line
+### 4. (optional) Downloading more bag files
+There is already one bag file available in the repository. More bag files are available for download [here](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link), or by running the following commands.
+Make sure you are in the root directory of the project:
 
-There are already one replay and bag file available. However, due to their size, they are not all included in the git repository. If you want to download them,
-run the following commands. Make sure you are in the root directory of the project.
-
-**1. Download the bag files**: The bag files are available [link](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link). Alternatively, you can download them with this command:
 ```bash
 ./scripts/download_bag_files # Download the bag file (you may need to rerun this command)
 ```
-
-**2. Decompress them:**
-```bash
-dts start_gui_tools --mount $(pwd):/workdir
-cd /workdir
-./scripts/decompress_bag_file ./bags/<choose .bag file>
-```
-
-Alternatively, you can replace the last command with `python3 ./scripts/decode_bag_file.py ...`. See `python3 ./scripts/decode_bag_file.py --help` for options.
-
-## Running on the Duckiebot (online SLAM)
-... (if possible)
-
 
 # Introduction
 
