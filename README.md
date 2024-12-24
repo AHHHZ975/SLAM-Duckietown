@@ -268,12 +268,14 @@ The alignment between the observed and estimated tag positions validates the rob
 
 <table>
   <tr>
+    <th>EKF-SLAM measurement model (without motion model)</th>
     <th>EKF-SLAM motion model (without measurement model)</th>
     <th>EKF-SLAM full version (motion+measurement model)</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/2e6e31eb-042a-4d8e-b112-f1225ff3c3f4" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/81e9e362-4eb5-461b-b8c6-cfb9e8371199" alt="Image 1" width="600"/></td>    
+    <td><img src="https://github.com/user-attachments/assets/da79a185-7a2c-4f1f-a0b8-54e941080fed" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/bf5b45fa-734a-4904-a885-a5e5a4004a9e" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/7f4a74d4-a4f5-4d9d-a520-01ce36687e79" alt="Image 1" width="600"/></td>    
   </tr>
 </table>
 
