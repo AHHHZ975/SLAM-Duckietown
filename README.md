@@ -17,7 +17,10 @@ This project advances Duckietown's localization and mapping capabilities and aim
 - Kevin Lessard (kevin.lessard@umontreal.ca)
 
 ### Demonstration
-[![Steering Control with Lane Markings](https://img.youtube.com/vi/F1eEpXL3weY/0.jpg)](http://www.youtube.com/watch?v=F1eEpXL3weY "Steering Control with Lane Markings")
+
+https://github.com/user-attachments/assets/26e11008-5fd8-4916-b7ca-a924ae3cbd96
+
+
 
 
 
