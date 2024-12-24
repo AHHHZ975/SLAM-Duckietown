@@ -1,16 +1,14 @@
 # The SLAM-Duckietown Research Project
+
+This is the official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
+
 **Abstract**
 
-This project implements an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform. 
-Duckietown is a fun, hands-on way to learn about autonomous robotics using small-scale robots (Duckiebots) in a miniature city. 
-Our goal is to estimate the Duckiebot’s position and the locations of static landmarks using data from wheel encoders and April tags.
-By combining odometry with landmarks, we improve localization and reduce drift over time.
-This work contributes to advancing localization and mapping capabilities in Duckietown.
-We explored offline SLAM, focusing on key tasks like odometry estimation, April tag detection, and pose estimation.
-We also created a ROS package for online experiments on the Duckiebot.
-The results demonstrate the effectiveness of the EKF-SLAM algorithm in improving the Duckiebot's localization and mapping performance that is proportional to 
-the quality of the April tag detection and the quantity of the landmarks in the environment. 
-We hope that this code can help build a more robust and accurate SLAM system for the Duckietown platform.
+This project implements an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform, a hands-on educational tool for learning autonomous robotics with small-scale robots (Duckiebots) in a miniature city. The goal is to estimate the Duckiebot's position and map static landmarks using data from wheel encoders and April tags. By integrating odometry with landmark detection, the system enhances localization accuracy and reduces drift over time.
+
+The work focuses on offline SLAM tasks such as odometry estimation, April tag detection, and pose estimation, and extends to developing a ROS package for online experiments with the Duckiebot. Results demonstrate that the EKF-SLAM algorithm effectively improves localization and mapping, with performance directly influenced by the quality of April tag detection and the density of landmarks in the environment.
+
+This project advances Duckietown's localization and mapping capabilities and aims to provide a foundation for building more robust and accurate SLAM systems. We hope that this code can help build a more robust and accurate SLAM system for the Duckietown platform.
 
 **Contributors**:
 
@@ -18,23 +16,22 @@ We hope that this code can help build a more robust and accurate SLAM system for
 - Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca, [@leo-ard](https://github.com/leo-ard))
 - Kevin Lessard (kevin.lessard@umontreal.ca)
 
-(This is the official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal)
+### Demonstration
+[![Steering Control with Lane Markings](https://img.youtube.com/vi/F1eEpXL3weY/0.jpg)](http://www.youtube.com/watch?v=F1eEpXL3weY "Steering Control with Lane Markings")
 
-## Teaser Video ([video link](https://www.youtube.com/watch?v=F1eEpXL3weY))
-https://github.com/user-attachments/assets/f1a94873-0523-4f0e-9316-caa063d14dae
 
 
 # Table of Contents
-1. [Running the code](#running-code)
+1. [Running the code](#running-the-code)
 1. [Introduction](#introduction)
 3. [Related Work](#related-work)
 4. [Method](#method)
 5. [Results](#results)
 6. [Conclusion](#conclusion)
-7. [Reference](#reference)
+7. [References](#references)
 8. [Annex](#annex)
 
-# Running code
+# Running the code
 
 There is two ways to run this project. Locally with prerecorded data or on a duckiebot. 
 The implementation on the duckiebot has only been tested in the simulator, thus it may need some changes for it to work on a real duckiebot. 
@@ -44,7 +41,9 @@ We recommend that you run the code with the recorded data.
 Prerequisites:
 - Python 3.12
 - Linux or macOS
-- [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line
+- [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line package for Duckietown in python
+
+## Offline EKF-SLAM Experiments
 
 ### 1. Clone the repository and cd
 ```bash
@@ -102,22 +101,89 @@ There is only one bag file available in the repository. More bag files are avail
 ./scripts/download_bag_files
 ```
 
+## Online EKF-SLAM Experiments in the Duckiematrix (no landmarks)
+
+### 1. Clone the repository and cd
+```bash
+git clone https://github.com/AHHHZ975/SLAM-Duckietown.git
+cd SLAM-Duckietown
+```
+
+### 2. Make sure you have a virtual duckiebot
+You can create one with the command:
+
+```
+dts duckiebot virtual create [VBOT]
+```
+
+where `[VBOT]` can be anything you like (but remember it for later).
+
+Then you can start your virtual robot with the command:
+
+```
+dts duckiebot virtual start [VBOT]
+```
+
+You should see it with a status `Booting` and finally `Ready` if you look at `dts fleet discover`: 
+
+```
+     | Hardware | Type    | Model     | Status | Hostname |
+     | -------- | ------- | --------- | ------ | -------- | ------------ |
+     | [VBOT]   | virtual | duckiebot | DB21J  | Ready    | [VBOT].local |
+```
+
+### 3. Make sure you update everything using these commands:
+```bash
+dts update
+dts desktop udpate
+dts duckiebot update [ROBOT_NAME]
+```
+
+### 4. Build the code on the robot:
+```bash
+dts code build -R [ROBOT_NAME]
+```
+
+### 5. Start the Duckiematrix simulator:
+
+```
+dts code start_matrix
+```
+
+### 6. Run the code on the robot:
+
+```
+dts code workbench -m -R [ROBOT_NAME]
+```
+
+
+In another terminal, you can launch the `noVNC` viewer for this exercise which can be useful to send commands to the robot and view the odometry that you calculating in the RViZ window. 
+
+```
+dts code vnc -R [ROBOT_NAME]
+```
+
+where `[ROBOT_NAME]` could be the real or the virtual robot (use whichever you ran the `dts code workbench` and `dts code build` command with).
+
+*Running the code on the real robot is currently unsupported for 32GB Duckiebots. It might work if you have a 64GB SD card with a lot of space available. We plan to provide support for the real robot in the future as well as real world online experiments and compare them to our ofline counterparts.*
+
+
 # Introduction
 
 
 ## Context
-Duckietown is an open-source platform designed to make robotics and artificial intelligence education accessible to a broad audience. It simulates a miniature urban environment where small-scale autonomous vehicles, known as Duckiebots, navigate roads, intersections, and traffic infrastructure. Duckiebots are low-cost, open-source robots equipped with a range of sensors, including cameras, wheel encoders, IMUs, and Time-of-Flight sensors, enabling them to perceive and interact with their surroundings. The primary sensor used for localization and mapping is a fisheye camera, which detects April tags—fiducial markers placed in the environment. By combining April tag detections with wheel encoder measurements, Duckiebots can estimate their pose and map static landmarks.
+Duckietown is an open-source platform for accessible robotics and AI education, featuring a miniature urban environment where low-cost, autonomous Duckiebots navigate roads and intersections. Equipped with sensors like cameras, wheel encoders, and IMUs, Duckiebots primarily use a fisheye camera to detect April tags, enabling pose estimation and mapping of static landmarks.
 
-Simultaneous Localization and Mapping (SLAM) is a critical task in autonomous robotics, aiming to estimate a robot's pose while simultaneously constructing a map of its environment. However, odometry-based motion estimation is prone to drift over time due to cumulative sensor errors. This project leverages April tags as external landmarks to correct pose estimation errors and mitigate drift, thereby improving the accuracy of localization and mapping.
+Simultaneous Localization and Mapping (SLAM) is a fundamental task in autonomous robotics, involving the estimation of a robot's pose while simultaneously building a map of its environment. However, odometry-based motion estimation is susceptible to drift over time due to cumulative sensor errors. This project addresses these challenges by leveraging April tags as external landmarks to correct pose estimation errors, significantly reducing drift and improving the accuracy of localization and mapping.
 
 
 ## Objective
-The primary objectives of this project are:
+The primary objectives of this project are::
 
 - To estimate the true pose (x, y, θ) of the Duckiebot over time.
 - To determine the precise locations of static landmarks (like April tags) within the Duckietown environment.
 
-To achieve these objectives, we propose an Extended Kalman Filter (EKF) SLAM algorithm that integrates data from wheel encoders and April tags. The EKF-SLAM algorithm combines odometry data with April tag detections to improve pose estimation and mapping accuracy. We aim to implement and evaluate the EKF-SLAM algorithm in both offline and online settings, focusing on key tasks like odometry estimation, April tag detection, and pose estimation.
+To achieve these goals, we implemented an Extended Kalman Filter (EKF) SLAM algorithm that integrates data from wheel encoders and April tag detections. This approach improves pose estimation and mapping accuracy. The algorithm was evaluated in both offline and online settings, focusing on odometry estimation, April tag detection, and pose estimation.
 
 ## The overview of the project
 
@@ -141,11 +207,11 @@ This project demonstrated that the EKF-SLAM algorithm significantly enhances the
 
 # Related Work
 
-The idea for this project originated from discovering an older online codebase on GitHub, SLAMDuck. [4] is a detailed SLAM system specifically designed for the Duckietown platform, integrating odometry, April tag detection, and pose estimation. It provides a modular and extensible framework for implementing and evaluating various SLAM algorithms, serving as a valuable resource for the Duckietown community. However, the system encounters reproducibility challenges with the current version of the Duckietown platform. Additionally, the codebase lacks clear organization, and the reported results fall short of expectations. Despite these limitations, SLAMDuck offers potential for improvement and optimization.
+The idea for this project originated from discovering an older online codebase on GitHub, **SLAMDuck** [4]. SLAMDuck is a detailed SLAM system specifically designed for the Duckietown platform, integrating odometry, April tag detection, and pose estimation. It provides a modular and extensible framework for implementing and evaluating various SLAM algorithms, serving as a valuable resource for the Duckietown community. However, the system encounters reproducibility challenges with the current version of the Duckietown platform. Additionally, the codebase lacks clear organization, and the reported results fall short of expectations. Despite these limitations, SLAMDuck offers potential for improvement and optimization.
 
-Several research efforts have demonstrated the benefits of robust EKF-SLAM implementations and the use of landmarks to enhance performance. [5] introduces TagSLAM, a robust SLAM framework leveraging fiducial markers to improve localization accuracy. Unlike traditional EKF-based methods, TagSLAM utilizes a graph-based optimization approach, enabling it to incorporate observations from both past and future data, resulting in smoother and more accurate trajectory estimation. Similarly, [6] explores the implementation of an EKF-based SLAM system, providing detailed insights into both software and hardware phases. This study highlights the effectiveness of EKF in constructing accurate environmental maps by integrating sensor data and addresses common challenges in EKF-SLAM systems.
+Several research efforts have demonstrated the benefits of robust EKF-SLAM implementations and the use of landmarks to enhance performance. [5] introduces **TagSLAM**, a robust SLAM framework leveraging fiducial markers to improve localization accuracy. Unlike traditional EKF-based methods, TagSLAM utilizes a graph-based optimization approach, enabling it to incorporate observations from both past and future data, resulting in smoother and more accurate trajectory estimation. Similarly, [6] explores the implementation of an **EKF-based SLAM** system, providing detailed insights into both software and hardware phases. This study highlights the effectiveness of EKF in constructing accurate environmental maps by integrating sensor data and addresses common challenges in EKF-SLAM systems.
 
-In addition, [7] provides a comprehensive overview of probabilistic robotics, covering foundational concepts such as Bayes filters, Kalman filters, and particle filters. This book served as a key reference for our implementation of the EKF-SLAM algorithm, particularly for incorporating landmark detection into the pipeline.
+In addition, [7] provides a comprehensive overview of **probabilistic robotics**, covering foundational concepts such as Bayes filters, Kalman filters, and particle filters. This book served as a key reference for our implementation of the EKF-SLAM algorithm, particularly for incorporating landmark detection into the pipeline.
 
 These works collectively highlight the advancements in EKF-SLAM systems utilizing fiducial markers like AprilTags. They offer valuable insights and techniques for developing robust and accurate localization and mapping solutions in autonomous robotics, guiding the design and optimization of our approach.
 
@@ -161,7 +227,7 @@ The Duckiebot collects a sequence of inputs, including odometry data from its wh
 
 ![image](https://github.com/user-attachments/assets/98828c24-0983-4d8f-ba1b-342c2c9280a6)
 
-## SLAM: Pose Estimation (Odometry) + Landmarks
+## SLAM = Pose Estimation (Odometry) + Landmarks
 SLAM involves two main components:
 - **Pose Estimation (Odometry)**: This uses encoder data to estimate the Duckiebot's motion. However, odometry alone is prone to cumulative errors or drift over time.
 - **Landmarks**: External references, such as April tags, provide additional observations to correct and refine odometry-based pose estimation.
@@ -183,60 +249,93 @@ The solution is to incorporate April tags as static landmarks in the environment
 
 ## The overview of pose estimation
 
-The pose estimation process relies on a combination of odometry and April tag detections. The algorithm predicts the Duckiebot's position and orientation using encoder data. April tag measurements are then used to correct these predictions and reduce drift, resulting in a more reliable trajectory estimation.
+The pose estimation process combines odometry and April tag detections to predict and correct the Duckiebot's position and orientation. Encoder data provides an initial estimate of the Duckiebot's motion, while April tag measurements are used to refine these predictions and reduce drift, resulting in more accurate and reliable trajectory estimation.
+
+### Interpolation Techniques
+
+1) **Improved Interpolation**: The motion assumes a continuous arc, meaning linear and angular displacements are integrated over the movement, resulting in smoother and more accurate trajectory estimation.
+
+2) **Simple Interpolation**: This assumes sequential application of linear and angular displacements, resulting in a more abrupt and less accurate trajectory, as seen in the red path in the previous section of the image.
 
 ![image](https://github.com/user-attachments/assets/267a8843-84e6-4040-98e1-c4dbe350c53b)
+
+## Mathematical model:
+
+The equations describe how the Duckiebot's position and orientation (x,y,θ) evolve over time based on its linear velocity (v) and angular velocity (ω). These formulas calculate the updated position after a small time step Δt, incorporating the Duckiebot's current orientation and motion. The updates rely on the kinematic model of a differential-drive robot, ensuring consistency with real-world motion dynamics.
 
 ![image](https://github.com/user-attachments/assets/c470354a-5367-4cf4-9d7e-3c300337c97b)
 
 
-## An overview of april tags detection steps
+## April tags detection steps
 
-<details>
-<summary>Overview of the april tags detection step</summary>
-</details>
 April Tags play a key role in landmark-based SLAM by providing reliable fiducial markers for localization and mapping. The detection process involves the following steps:
-1) **Image Preprocessing**: The input image is converted to grayscale, and adaptive thresholding is applied to enhance contrast between the tag and the background. The image is divided into tiles, and local extrema are computed to binarize the image, effectively isolating regions of interest.
-2) **Segmentation**: Edges are identified by detecting pixels with significant intensity changes. A union-find algorithm is then used to cluster black and white pixels into distinct regions.
-3) **Quadrilateral Detection**: Quadrilateral shapes are fitted to the detected edges, as April Tags are designed to have a distinct square-like appearance.
-4) **Decoding**: The detected quadrilateral is normalized using homography to correct perspective distortions. The binary code embedded within the tag is then extracted and decoded to retrieve the tag's unique ID.
+
+1) **Image Preprocessing**: 
+   - Convert the input image to grayscale.
+   - Apply adaptive thresholding to enhance the contrast between the tag and the background.
+   - Divide the image into tiles and compute local extrema to binarize the image, isolating regions of interest.
+2) **Segmentation**: 
+   - Detect edges by identifying pixels with significant intensity changes.
+   - Use a union-find algorithm to cluster black and white pixels into distinct regions.
+3) **Quadrilateral Detection**:
+   - Fit quadrilateral shapes to the detected edges, as April tags are designed with a distinct square-like appearance.
+4) **Decoding**:
+   - Normalize the detected quadrilateral using homography to correct perspective distortions.
+   - Extract the binary code embedded within the tag and decode it to retrieve the tag's unique ID.
 
 ![image](https://github.com/user-attachments/assets/01d8c9b2-e395-4689-b017-57c4b662e864)
 
-To implement April tag detection in this project, we leveraged the Duckietown AprilTag library [8], which provides robust and efficient tools for identifying and decoding tags in real-time. This library simplifies the integration of April tags into the SLAM pipeline and ensures reliable detection in various lighting and environmental conditions. The details of the April tag detection process are illustrated below and more information can be found in [2] (April Tags Documentation).
 
-
-## April tags pose estimation
+## April tags pose estimation steps
 
 April tags are crucial for determining the Duckiebot's pose relative to its environment. The process involves the following steps:
 
-1) **Frame Definition**: Each April tag defines a local coordinate system, with the tag's center as the origin. The four corners of the tag are assigned fixed 3D coordinates in this local frame, providing a consistent reference for pose estimation.
-2) **Tag Detection**: Using the detection method outlined earlier, the tag's 2D pixel coordinates are extracted from the camera image. This step provides the observed positions of the tag's corners in the image plane.
-3) **PnP Solver**: A Perspective-n-Point (PnP) solver is used to compute the transformation matrix that aligns the 3D coordinates of the tag's corners with their observed 2D positions in the camera's frame of reference. This transformation matrix consists of rotation and translation components, enabling precise localization of the tag relative to the camera.
+1) **Frame Definition**: 
+   - Each April tag defines a local coordinate system with its center as the origin.
+   - The four corners of the tag are assigned fixed 3D coordinates in this local frame, providing a consistent reference for pose estimation.
 
-This pose estimation process provides the Duckiebot with accurate information about its position and orientation in the environment. By integrating this data with the SLAM pipeline, the Duckiebot can maintain consistent and reliable localization.
+2) **Tag Detection**: 
+   - Extract the tag's 2D pixel coordinates from the camera image using the detection method outlined earlier.
+   - These coordinates represent the observed positions of the tag's corners in the image plane.
+3) **PnP Solver**:
+   - Use a Perspective-n-Point (PnP) solver to compute the transformation matrix that aligns the 3D coordinates of the tag's corners with their observed 2D positions in the camera's frame of reference.
+   - This transformation matrix, consisting of rotation and translation components, provides precise localization of the tag relative to the camera.
 
-The steps are visualized in the diagrams below, illustrating the coordinate transformations and the pose estimation workflow.
+By integrating this pose estimation data into the SLAM pipeline, the Duckiebot achieves consistent and reliable localization, enabling accurate positioning and mapping in its environment.
+
+The diagrams below illustrate the coordinate transformations and the pose estimation workflow.
 
 ![image](https://github.com/user-attachments/assets/3ea9317b-b1f3-482e-87e5-0723022f8180)
 
 ![image](https://github.com/user-attachments/assets/1c2a0820-2858-4a9d-91a1-495c88f717c2)
 
+## April tags Implementation Details
+
+For this project, we utilized the **Duckietown AprilTag library** [8], which provides robust and efficient tools for detecting and decoding April tags in real-time. This library simplifies the integration of April tags into the SLAM pipeline and ensures reliable detection across various lighting and environmental conditions.
+
+Details of the April tag detection process are illustrated above, and further information can be found in [2] (April Tags Documentation).
 
 ## Extended Kalman Filter
 
-The Extended Kalman Filter (EKF) is a recursive algorithm that fuses sensor data to estimate the Duckiebot’s pose (x,y,θ) and the positions of static landmarks in the environment. It operates in two main steps — **prediction and correction** — which run iteratively. In the prediction step, the motion model uses odometry data from wheel encoders to estimate the Duckiebot’s next state, projecting its pose forward in time. This predicted state, however, is prone to errors due to sensor noise and drift. To address this, the correction step integrates measurements from April tags.
+The Extended Kalman Filter (EKF) is a recursive algorithm that fuses sensor data to estimate the Duckiebot’s pose (x,y,θ) and the positions of static landmarks in the environment. It operates in two main steps — **prediction and correction** — running iteratively to balance the uncertainty of sensor data with the dynamics of the system. While conceptually straightforward, the EKF involves several nuances that can be counterintuitive:
 
-The final process involves:
+### EKF Process:
 1) **Prediction**: Use the motion model to predict the Duckiebot's next state based on odometry.
 2) **Correction**: Incorporate April tag measurements to correct the prediction, reducing drift and improving accuracy.
 3) **Covariance Update**: Adjust the uncertainty in the state estimate to reflect the confidence in the data.
 
 By iteratively combining the predictive and corrective steps, the EKF ensures accurate localization and mapping, even in the presence of noisy or incomplete sensor inputs. The visual below illustrates the prediction-correction workflow in the EKF, showing how odometry and April tag data are fused for reliable pose estimation.
 
+### Key Challenges
+- **Linearization**: The EKF linearizes nonlinear motion and measurement models, but the error introduced depends on the operating region. For example, sharp turns or irregular tag placements can cause significant deviations from true dynamics.
+- **Time-Varying Uncertainty**: As the Duckiebot moves, the uncertainty in its state grows during prediction steps and shrinks during correction. Understanding how these uncertainties propagate through the system requires a deep understanding of the covariance matrix dynamics.
+- **Observability**: The EKF relies on sufficient measurements to reduce drift. If April tags are sparsely distributed or incorrectly detected, parts of the Duckiebot’s state may become unobservable, leading to unreliable estimates.
+
+## Workflow
+
+The visual below illustrates the EKF's prediction-correction workflow, showing how odometry data predicts the next state and April tag measurements refine it. By iteratively fusing these data sources, the EKF achieves accurate localization and mapping, even under noisy or incomplete sensor inputs.
 
 ![Screenshot from 2024-12-20 18-09-33](https://github.com/user-attachments/assets/4dd33dd3-ee07-48f4-8103-ab388d64c816)
-
 
 ## Benchmarking using Vicon system
 
@@ -386,18 +485,24 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
  
 ### Online Experiments on the virtual Duckiebot
 
-The online experiments were conducted using the Duckiematrix simulator, which emulates the physical environment of Duckietown. The simulator provides a realistic setting for testing the EKF-SLAM algorithm in real-time. The online experiments focused on validating the SLAM system's accuracy and robustness in a simulated environment, providing insights into its real-world applicability. The figure below illustrates the online experiment setup and the key components involved in the simulation.
+The online experiments were conducted using the Duckiematrix simulator, which emulates the physical environment of Duckietown. The simulator provides a realistic setting for testing the EKF-SLAM algorithm in real-time. The online experiments focused on validating the SLAM system's accuracy and robustness in a simulated environment, providing insights into its real-world applicability. 
+
+The figure below illustrates the setup for the online experiments, highlighting the key components of the simulation environment and the SLAM pipeline. However, we couldn't measure the accuracy of the online experiments due to the lack of ground truth data in the Duckiematrix simulator as well as the lack of landmarks. Also, the noise in the odometry data is almost negligeable in the simulation compared to the real world and is mainly affected by compute power. In the figure below, appart from the bad driving, the EKF-SLAM system is working as expected.
 
 ![Screenshot from 2024-12-23 21-46-49](https://github.com/user-attachments/assets/f8e1778a-4a5f-41ce-8929-d2ef8b85c0c5)
 ![Screenshot from 2024-12-23 22-29-00](https://github.com/user-attachments/assets/6303243f-9e24-4c3e-95ae-83d261959c69)
 
-Attempts with the current version of Duckiebot failed at building the code properly, but we expect to bmake it work on the real Duckiebot in the future.
+Attempts with the current version of Duckiebot failed at building the code properly, but we expect to bmake it work on the real Duckiebot in the future and test the system in the real world with the landmarks.
 
 # Conclusion
 
-This project focused on implementing an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform, integrating odometry data with April tag detections to improve localization and mapping accuracy. The EKF-SLAM algorithm effectively combined motion estimation with landmark-based corrections, enhancing the Duckiebot's pose estimation and mapping capabilities. The results improved with our implementation when compared to [4]. The results demonstrated the algorithm's ability to reduce drift and improve localization accuracy, particularly when incorporating April tags as external landmarks. The different interpolation techniques and ablation studies provided valuable insights into the algorithm's performance under varying conditions, highlighting the importance of motion and measurement model parameters in SLAM accuracy.
+This project successfully implemented an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform, demonstrating significant improvements in localization and mapping accuracy. By integrating odometry data with April tag detections, the algorithm effectively reduced drift and enhanced pose estimation through landmark-based corrections.
 
-# Reference
+Comparative results showed measurable improvements over prior implementations [4], particularly when incorporating April tags as external landmarks. The exploration of different interpolation techniques and ablation studies provided valuable insights into the interplay between motion and measurement models, underscoring the critical role of parameter tuning in achieving robust SLAM performance.
+
+While challenges were encountered in deploying the algorithm on the physical Duckiebot, the successful validation in simulation highlights the EKF-SLAM algorithm's real-world potential. Future work will focus on refining the system for seamless integration with hardware and expanding its applicability to more complex and dynamic environments.
+
+# References
 
 [1] [Lane-SLAM](https://github.com/mandanasmi/lane-slam)
 
