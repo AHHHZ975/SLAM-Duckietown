@@ -1,0 +1,12 @@
+#!/bin/bash 
+
+echo "** CREATING virtual environnement **"
+
+python3 -m venv .gdown_venv
+source .gdown_venv/bin/activate
+pip install gdown
+gdown --folder https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr -O ./bags
+deactivate
+
+#wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr' -O b
+#wget https://googledrive.com/host/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr

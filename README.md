@@ -6,14 +6,18 @@ The official repository for the SLAM-Duckietown - a project for the Autonomous V
 
 ## Unzipping the bag files
 Here is the [link](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link) to the bag files.
-```bash
 
-```
+# Running code
 
-## Running the EKF-SLAM code on unzipped bag files
+There is two ways to run this project. Locally with prerecorded data or on a duckiebot (as a catkin package).
+
+## Running it locally
 Prerequisites:
 - Python 3.12
 - Linux or macOS
+
+
+### Running the EKF-SLAM code on unzipped bag files
 
 ### 1. Clone the repository and cd
 ```bash
@@ -52,6 +56,22 @@ If you have trouble, refer to the [lib-dt-apriltags repository](https://github.c
 ```bash
 python3 src/replay_no_ros.py -d ./output/<choose_dir>
 ```
+
+### (optional) Downloading and decoding more test files
+Prerequisite:
+- [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line
+
+There are already one replay and bag file available. However, due to their size, they are not all included in the git repository. If you want to download them,
+run the following commands. Make sure you are in the root directory of the project.
+
+```bash
+./scripts/download_bag_files # Download the bag file (you may need to rerun this command)
+dts start_gui_tools --mount $(pwd):/workdir
+cd /workdir
+./scripts/decompress_bag_file ./bags/<choose .bag file>
+```
+
+Alternatively, you can replace the last command with `python3 ./scripts/decode_bag_file.py ...`. See `python3 ./scripts/decode_bag_file.py --help` for options.
 
 ## Running on the Duckiebot (online SLAM)
 ... (if possible)

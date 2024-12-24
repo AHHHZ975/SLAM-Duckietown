@@ -1,0 +1,30 @@
+#!/bin/bash 
+# This scripts is a helper to decode a bag file in a usable format for our visualizations.
+# This script assumes that the bag file is named a certain way. If you want to use a broader version of this decompression file,
+# use the decode_bag_file.py script in the same folder.
+#
+# NOTE: You MUST be in the root directory to run this script.
+# USAGE: ./script/decompress_bag_file <bag_file_to_decompress>
+
+if [ "$1" == "" ]; then
+    echo "You must supply a bag file name"
+    exit 1
+fi
+
+bag_location=$1
+bag_basename=$(basename $bag_location)
+bag_basename_without_ext=${bag_basename%.*}
+
+robot_name=${bag_basename%%_*}
+echo $robot_name
+delay=0
+
+if [[ "$bag_basename" == "quackgpt_joystick_easy.bag" || "$bag_basename" == "quackgpt_manual_easy.bag" || "$bag_basename" == "quackgpt_joystick_hard.bag" ]]; then
+    delay=7210
+elif [[ "$bag_basename" == "quackgpt_small_town_joystick.bag" ]]; then
+    delay=10
+elif [[ "$bag_basename" == "quackgpt_small_town_joystick5_loop.bag" ]]; then
+    delay=0
+fi
+
+python3 ./scripts/decode_bag_file.py -b $bag_location -r $robot_name -o ./output/$bag_basename_without_ext -d $delay
