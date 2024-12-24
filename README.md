@@ -20,7 +20,8 @@ We hope that this code can help build a more robust and accurate SLAM system for
 
 (This is the official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal)
 
-## (Insert video preview)
+https://github.com/user-attachments/assets/f1a94873-0523-4f0e-9316-caa063d14dae
+
 
 # Table of Contents
 1. [Running the code](#running-code)
