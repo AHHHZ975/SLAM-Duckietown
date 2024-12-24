@@ -16,7 +16,7 @@ This project advances Duckietown's localization and mapping capabilities and aim
 - Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca, [@leo-ard](https://github.com/leo-ard))
 - Kevin Lessard (kevin.lessard@umontreal.ca)
 
-### Demonstration
+### Teaser Video ([video link](https://www.youtube.com/watch?v=F1eEpXL3weY))
 
 https://github.com/user-attachments/assets/26e11008-5fd8-4916-b7ca-a924ae3cbd96
 
@@ -351,6 +351,11 @@ The procedure to collect this data was as following:
 4. We collected all files (bags, csv from tracking) in the repository and synchronize them (see [decode_bag_file.py](https://github.com/AHHHZ975/SLAM-Duckietown/blob/main/scripts/decode_bag_file.py) for implementation). Timestemp on both recordings was used to find the starting time of the robot and the ground truth data was reajusted to the duckiebot position and angle frame. Some recordings had a significant delay between the bag file and the ground truth CSV files, due to time desynchronization on the computer running the vicon system. In these cases, we resynchronized them by offsetting the timestemp by the number of seconds that differed between the computers.
 
 # Results
+
+## Robot and Landmark Pose Estimation using EKF-SLAM ([video link](https://www.youtube.com/watch?v=7ioZXlcit6c))
+https://github.com/user-attachments/assets/c089f093-6596-4e6f-a805-9f2fed68924b
+
+
 
 ## Offline April Tags Detection and Odometry Estimation ([video link](https://www.youtube.com/watch?v=KhHEgYVbUk4))
 https://github.com/user-attachments/assets/3858c440-4d17-4229-b8aa-2145974c0ea6
