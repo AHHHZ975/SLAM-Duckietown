@@ -1,21 +1,47 @@
-# SLAM-Duckietown
+# The SLAM-Duckietown Research Project
+**Abstract**
 
-The official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal.
+This project implements an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform. 
+Duckietown is a fun, hands-on way to learn about autonomous robotics using small-scale robots (Duckiebots) in a miniature city. 
+Our goal is to estimate the Duckiebot’s position and the locations of static landmarks using data from wheel encoders and April tags.
+By combining odometry with landmarks, we improve localization and reduce drift over time.
+This work contributes to advancing localization and mapping capabilities in Duckietown.
+We explored offline SLAM, focusing on key tasks like odometry estimation, April tag detection, and pose estimation.
+We also created a ROS package for online experiments on the Duckiebot.
+The results demonstrate the effectiveness of the EKF-SLAM algorithm in improving the Duckiebot's localization and mapping performance that is proportional to 
+the quality of the April tag detection and the quantity of the landmarks in the environment. 
+We hope that this code can help build a more robust and accurate SLAM system for the Duckietown platform.
+
+**Contributors**:
+
+- AmirHossein Zamani (amirhossein.zamani@mila.quebec)
+- Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca, [@leo-ard](https://github.com/leo-ard))
+- Kevin Lessard (kevin.lessard@umontreal.ca)
+
+(This is the official repository for the SLAM-Duckietown - a project for the Autonomous Vehicles (Duckietown) Course in Fall 2024 at University of Montreal)
 
 ## (Insert video preview)
 
-## Unzipping the bag files
-Here is the [link](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link) to the bag files.
+# Table of Contents
+1. [Running the code](#running-code)
+1. [Introduction](#introduction)
+3. [Related Work](#related-work)
+4. [Method](#method)
+5. [Results](#results)
+6. [Conclusion](#conclusion)
+7. [Reference](#reference)
+8. [Annex](#annex)
 
 # Running code
 
-There is two ways to run this project. Locally with prerecorded data or on a duckiebot (as a catkin package).
+There is two ways to run this project. Locally with prerecorded data or on a duckiebot. 
+The implementation on the duckiebot has only been tested in the simulator, thus it may need some changes for it to work on a real duckiebot. 
+We recommend that you run the code with the recorded data.
 
 ## Running it locally
 Prerequisites:
 - Python 3.12
 - Linux or macOS
-
 
 ### Running the EKF-SLAM code on unzipped bag files
 
@@ -44,28 +70,33 @@ On Ubuntu:
 pip install dt-apriltags
 ```
 
-On macOS (or to have the latest version):
+On macOS (or to have the latest version on linux):
 ```bash
-``chmod +x ./scripts/install_dt_apriltags
-``./scripts/install_dt_apriltags
+chmod +x ./scripts/install_dt_apriltags
+./scripts/install_dt_apriltags
 pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the script
 ```
 If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)
 
-### 3. Run the code. If you don't want to run through ros, you can run the following command:
+### 3. Run the code.
 ```bash
 python3 src/replay_no_ros.py -d ./output/<choose_dir>
 ```
 
-### (optional) Downloading and decoding more test files
+### 4. (optional) Downloading and decoding more test files
 Prerequisite:
 - [dts](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_laptop/setup_dt_shell.html) command line
 
 There are already one replay and bag file available. However, due to their size, they are not all included in the git repository. If you want to download them,
 run the following commands. Make sure you are in the root directory of the project.
 
+**1. Download the bag files**: The bag files are available [link](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link). Alternatively, you can download them with this command:
 ```bash
 ./scripts/download_bag_files # Download the bag file (you may need to rerun this command)
+```
+
+**2. Decompress them:**
+```bash
 dts start_gui_tools --mount $(pwd):/workdir
 cd /workdir
 ./scripts/decompress_bag_file ./bags/<choose .bag file>
@@ -76,26 +107,6 @@ Alternatively, you can replace the last command with `python3 ./scripts/decode_b
 ## Running on the Duckiebot (online SLAM)
 ... (if possible)
 
-## The SLAM-Duckietown Research Project
-**Abstract**
-
-This project implements an Extended Kalman Filter (EKF) SLAM algorithm for 
-the Duckietown platform. Duckietown is a fun, hands-on way to learn about autonomous robotics using small-scale robots (Duckiebots) in a miniature city. Our goal is to estimate the Duckiebot’s position and the locations of static landmarks using data from wheel encoders and April tags. By combining odometry with landmarks, we improve localization and reduce drift over time. This work contributes to advancing localization and mapping capabilities in Duckietown. We explored offline SLAM, focusing on key tasks like odometry estimation, April tag detection, and pose estimation. We also created a ROS package for online experiments on the Duckiebot. The results demonstrate the effectiveness of the EKF-SLAM algorithm in improving the Duckiebot's localization and mapping performance that is proportional to the quality of the April tag detection and the quantity of the landmarks in the environment. We hope that this code can help build a more robust and accurate SLAM system for the Duckietown platform.
-
-**Contributors**:
-
-- AmirHossein Zamani (amirhossein.zamani@mila.quebec)
-- Léonard Oest O’Leary (leonard.oest.oleary@umontreal.ca)
-- Kevin Lessard (kevin.lessard@umontreal.ca)
-
-# Table of Contents
-1. [Introduction](#introduction)
-3. [Related Work](#related-work)
-4. [Method](#method)
-5. [Results](#results)
-6. [Conclusion](#conclusion)
-7. [Reference](#reference)
-8. [Annex](#annex)
 
 # Introduction
 
