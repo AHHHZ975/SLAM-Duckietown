@@ -367,16 +367,16 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
     <th>MOTION_MODEL_VARIANCE=0.1</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/550a8972-7f85-4f69-9c2c-b318c0c81d8e" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/6f72dbc0-3d3a-487f-8c37-8ef1e2abc143" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/a15dc98a-2b6a-4360-896d-2a9ad3568767" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/05358078-3f73-4866-965b-04165f1e5fef" alt="Image 1" width="600"/></td>
   </tr>
   <tr>
-    <th>MOTION_MODEL_VARIANCE=0.7</th>
+    <th>MOTION_MODEL_VARIANCE=0.5</th>
     <th>MOTION_MODEL_VARIANCE=1</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/63803a17-101f-4de4-8f46-bae28c11791d" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/10472a6d-11d3-41e0-8430-6f02d0cdb943" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/f420ff0e-8353-4f33-8f5a-eb850c1a9106" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/06284fed-93c7-43db-8096-fad729a6221e" alt="Image 1" width="600"/></td>
   </tr>
   <tr>
 </table>
