@@ -58,11 +58,11 @@ cd /workdir
 ./scripts/decompress_bag_file ./bags/<choose .bag file>
 ```
 
-Alternatively, you can replace the last command with `python3 ./scripts/decode_bag_file.py ...`. See `python3 ./scripts/decode_bag_file.py --help` for options.
+Alternatively, you can replace the last command with `python3 ./scripts/decode_bag_file.py`. See `python3 ./scripts/decode_bag_file.py --help` for options.
 
 
 
-### 2. Install dependencies (Lower than python 3.13)
+### 3. Install dependencies (Lower than python 3.13)
 
 **(optional) Create a virtual environment**
 ```bash
@@ -89,17 +89,16 @@ pip install ./lib-dt-apriltags/dist/dt_apriltags-*.whl # as instructed by the sc
 ```
 If you have trouble, refer to the [lib-dt-apriltags repository](https://github.com/duckietown/lib-dt-apriltags)
 
-### 3. Run the code.
+### 4. Run the code.
 ```bash
 python3 src/replay_no_ros.py -d ./output/<choose_dir>
 ```
 
-### 4. (optional) Downloading more bag files
-There is already one bag file available in the repository. More bag files are available for download [here](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link), or by running the following commands.
-Make sure you are in the root directory of the project:
+### 5. (optional) Downloading more bag files
+There is only one bag file available in the repository. More bag files are available for download [here](https://drive.google.com/drive/folders/1nS3F5duSDRVy3O2KG_plvYDwxeNxCxQr?usp=drive_link), or by running the following commands (in the root directory of the project) :
 
 ```bash
-./scripts/download_bag_files # Download the bag file (you may need to rerun this command)
+./scripts/download_bag_files
 ```
 
 # Introduction
