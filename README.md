@@ -384,16 +384,22 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
   <tr>
 </table>
  
-#### Online Experiments on the virtual Duckiebot
+### Online Experiments on the virtual Duckiebot
+
+The online experiments were conducted using the Duckiematrix simulator, which emulates the physical environment of Duckietown. The simulator provides a realistic setting for testing the EKF-SLAM algorithm in real-time. The online experiments focused on validating the SLAM system's accuracy and robustness in a simulated environment, providing insights into its real-world applicability. The figure below illustrates the online experiment setup and the key components involved in the simulation.
 
 ![Screenshot from 2024-12-23 21-46-49](https://github.com/user-attachments/assets/f8e1778a-4a5f-41ce-8929-d2ef8b85c0c5)
 ![Screenshot from 2024-12-23 22-29-00](https://github.com/user-attachments/assets/6303243f-9e24-4c3e-95ae-83d261959c69)
 
+Attempts with the current version of Duckiebot failed at building the code properly, but we expect to bmake it work on the real Duckiebot in the future.
 
+# Conclusion
+
+This project focused on implementing an Extended Kalman Filter (EKF) SLAM algorithm for the Duckietown platform, integrating odometry data with April tag detections to improve localization and mapping accuracy. The EKF-SLAM algorithm effectively combined motion estimation with landmark-based corrections, enhancing the Duckiebot's pose estimation and mapping capabilities. The results improved with our implementation when compared to [4]. The results demonstrated the algorithm's ability to reduce drift and improve localization accuracy, particularly when incorporating April tags as external landmarks. The different interpolation techniques and ablation studies provided valuable insights into the algorithm's performance under varying conditions, highlighting the importance of motion and measurement model parameters in SLAM accuracy.
 
 # Reference
 
-[1] [Replica Dataset](https://github.com/facebookresearch/Replica-Dataset)
+[1] [Lane-SLAM](https://github.com/mandanasmi/lane-slam)
 
 [2] [April Tags](https://april.eecs.umich.edu/software/apriltag)
 
@@ -423,7 +429,7 @@ Here, we briefly outline the three potential directions we discussed for our pro
 
 
 #### Project Proposal 1: Lane-SLAM Adaptation for Duckiebot
-Our first proposal involves understanding and re-implementing the [Lane-SLAM project](https://github.com/mandanasmi/lane-slam) while adapting it to the current hardware and software versions of the Duckiebot and Duckietown. Similar to the original "Lane-SLAM" project, we aim to decouple the SLAM task—meaning we would compute localization and mapping steps independently. In this approach:
+Our first proposal involves understanding and re-implementing the [Lane-SLAM project](https://github.com/mandanasmi/lane-slam) [1] while adapting it to the current hardware and software versions of the Duckiebot and Duckietown. Similar to the original "Lane-SLAM" project, we aim to decouple the SLAM task—meaning we would compute localization and mapping steps independently. In this approach:
 
 * **Mapping**: We start by detecting three types of lane markers (yellow segmented lines in the center, white sidelines, and red stop lines) from the camera image on the robot. We could use either a learning-based method or classical image-processing algorithms. We would then reconstruct these detected lines in 3D by computing the homography matrix between two consecutive image frames. Additionally, we can estimate camera motion through rotation and translation computations.
 
