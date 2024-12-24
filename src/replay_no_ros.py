@@ -13,26 +13,27 @@ import os
 from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
-MEASUREMENT_MODEL_VARIANCE = 0.2
-DELTA_TIME = 0.5 # second
-
+MEASUREMENT_MODEL_VARIANCE = 0.7
+DELTA_TIME = 2 # second
 ENABLE_MEASUREMENT_MODEL = True
-ENABLE_CIRCULAR_INTERPOLATION = False
-
+ENABLE_CIRCULAR_INTERPOLATION = True
 # Be warned, this option gives unprivileged information to the ekf algorithmq
 # (a.k.a, the ekf algorithm is aware of the ground truth position of the tags)
 ENABLE_GOD_EKF = False
 # The 'secret key' is the correspondance between the tag numbers and the positions on the map
 GOD_SECRET_KEY = [80, 44, 41, 26, 110, 106, 101, 31, 65, 23, 232, 54]
 DISABLE_MOTION_MODEL = False # This option disables the motion model
-
 ENABLE_FAST_MODE = False # (may be less precise)
+ENABLE_CAMERA_VISUALIZATION = False # This makes the runtime so much faster, if you don't care about the 
+                                    # camera images and april tags bounding boxes visualization.
 
 
 
 image_list = []
 IGNORE_TAGS = []
 # IGNORE_TAGS = [74, 23, 26, 65] # These tags are duplicated in our experiments
+
+
 
 
 # Command line utility
@@ -122,7 +123,9 @@ def replay(dir):
                 detected_april_tags = detect_tags(img, camera_params)
                 timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
                 bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
-                visualize_bounding_boxes(img, bounding_boxes)
+                
+                if ENABLE_CAMERA_VISUALIZATION:
+                    visualize_bounding_boxes(img, bounding_boxes)
 
         elif event == "landmarks":
             first_coma = line.find(",")
@@ -217,7 +220,8 @@ def replay(dir):
                     detected_april_tags = detect_tags(img, camera_params)
                     timestamp_detectedTags_pair_list.append((timestemp, detected_april_tags))
                     bounding_boxes = list(map(lambda x : (x.center.tolist(), x.corners.tolist(), x.tag_id, x.pose_t), detected_april_tags))
-                    visualize_bounding_boxes(img, bounding_boxes)
+                    if ENABLE_CAMERA_VISUALIZATION:                    
+                        visualize_bounding_boxes(img, bounding_boxes)
 
             motion_model_mean, motion_model_covariance, measured_tags = EKF_pose_estimation(
                 angular_displacement,
@@ -346,8 +350,8 @@ def EKF_pose_estimation(
         
         # Initialize the mean covariancethe new elements in the motion model's mean and covariance matrices
         for i in range(old_state_vector_size, new_state_vector_size, 2):
-            motion_model_covariance[i, i] = 100 ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
-            motion_model_covariance[i+1, i+1] = 100 ** 2 # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i, i] = 10000     # The initial cov for the landmarks is inf because we have no idea where they are
+            motion_model_covariance[i+1, i+1] = 10000 # The initial cov for the landmarks is inf because we have no idea where they are
             tag_no = (i - 3) // 2
             motion_model_mean[3 + 2 * tag_no] = tags_positions[tag_no][0] # x position of april tag
             motion_model_mean[3 + 2 * tag_no + 1] = tags_positions[tag_no][1] # y position of april tags
@@ -364,15 +368,43 @@ def EKF_pose_estimation(
     
     if DISABLE_MOTION_MODEL:
         G = np.eye(3)
+    else:
+        if ENABLE_CIRCULAR_INTERPOLATION: # When we're using the circular interpolation
+            if abs(angular_displacement) <= 1e-2: # Linear movement 
 
-    elif ENABLE_CIRCULAR_INTERPOLATION: # When we're using the circular interpolation
-        if abs(angular_displacement) <= 1e-2: # Linear movement 
+                motion_model_mean = motion_model_mean + Fx.T @ np.array([
+                    linear_displacement * np.cos(previous_robot_orientation),
+                    linear_displacement * np.sin(previous_robot_orientation),
+                    0
+                ])     
 
+                # Jacobian
+                G = np.array([
+                [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
+                [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
+                [0, 0, 1]
+                ])
+            else: # Circular movement
+                linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
+                motion_model_mean = motion_model_mean + (Fx.T @ np.array([
+                    -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
+                    linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
+                    angular_displacement
+                ]))        
+                motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
+
+                # Jacobian
+                G = np.array([  
+                [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
+                [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
+                [0, 0, 1]
+                ])
+        else: # When we're using the linear interpolation
             motion_model_mean = motion_model_mean + Fx.T @ np.array([
                 linear_displacement * np.cos(previous_robot_orientation),
                 linear_displacement * np.sin(previous_robot_orientation),
-                0
-            ])     
+                angular_displacement
+            ])
 
             # Jacobian
             G = np.array([
@@ -380,34 +412,6 @@ def EKF_pose_estimation(
             [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
             [0, 0, 1]
             ])
-        else: # Circular movement
-            linear_to_angular_displacement_ratio = linear_displacement / angular_displacement
-            motion_model_mean = motion_model_mean + (Fx.T @ np.array([
-                -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement),
-                linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) - linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement),
-                angular_displacement
-            ]))        
-            motion_model_mean[2] = (motion_model_mean[2] + np.pi) % (2 * np.pi) - np.pi # Keep theta in [-pi, pi]
-
-            # Jacobian
-            G = np.array([  
-               [1, 0, -linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.cos(previous_robot_orientation + angular_displacement)],
-               [0, 1, -linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation) + linear_to_angular_displacement_ratio * np.sin(previous_robot_orientation + angular_displacement)],
-               [0, 0, 1]
-            ])
-    else: # When we're using the linear interpolation
-        motion_model_mean = motion_model_mean + Fx.T @ np.array([
-            linear_displacement * np.cos(previous_robot_orientation),
-            linear_displacement * np.sin(previous_robot_orientation),
-            angular_displacement
-        ])
-
-        # Jacobian
-        G = np.array([
-        [1, 0, -linear_displacement * np.sin(previous_robot_orientation)],
-        [0, 1, linear_displacement * np.cos(previous_robot_orientation)],
-        [0, 0, 1]
-        ])
 
 
     # Noise covariance matrix for the motion model
@@ -661,10 +665,12 @@ if __name__ == "__main__":
                     debug=0)
 
 
-    plt.ion()
+    plt.ion()            
     plt.show()
-    fig_img, ax_img = plt.subplots()
+    if ENABLE_CAMERA_VISUALIZATION:        
+        fig_img, ax_img = plt.subplots()
     fig_path, ax_path = plt.subplots()
+    # fig_error, ax_error = plt.subplots(figsize=(10, 6))
 
 
     args = parse_arguments()
