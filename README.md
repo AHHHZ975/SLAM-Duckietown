@@ -383,6 +383,12 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
   </tr>
   <tr>
 </table>
+ 
+#### Online Experiments on the virtual Duckiebot
+
+![Screenshot from 2024-12-23 21-46-49](https://github.com/user-attachments/assets/f8e1778a-4a5f-41ce-8929-d2ef8b85c0c5)
+![Screenshot from 2024-12-23 22-29-00](https://github.com/user-attachments/assets/6303243f-9e24-4c3e-95ae-83d261959c69)
+
 
 
 # Reference
