@@ -312,25 +312,26 @@ The difference becomes more visible when increasing the delta time from 2 second
 In both cases, the orange curve shows the prediction from EKF-SLAM motion model and the purple curve demonstrates the ground truty obtained from the Vicon system in the lab at UdeM. Here is the results with the ```DELTA_TIME=2``` seconds.
 
 #### 1- Ablation on various amount of ```DELTA_TIME```
+
 <table>
   <tr>
     <th>0.05 sec</th>
     <th>0.2 sec</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/0a39dabd-cda4-4ba2-b257-170b3538406e" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/61e44ae4-aa71-49d8-8b40-087aa7520fa8" alt="Image 1" width="600"/></td>  
+    <td><img src="https://github.com/user-attachments/assets/514ad9c0-12e5-4571-aea1-af3a077becc4" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/0bb7b5e9-32c8-4fc0-bd5b-b61e769dcd3f" alt="Image 1" width="600"/></td>  
   </tr>
   
   The difference becomes more visible when increasing the delta time from 2 seconds to 5 seconds. Here is the results with the ```DELTA_TIME=5``` seconds.
   
   <tr>
+    <th>0.7 sec</th>
     <th>1 sec</th>
-    <th>5 sec</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/c5e69082-9db9-45e5-9e68-ec592bf0e5b6" alt="Image 1" width="600"/></td>
-    <td><img src="https://github.com/user-attachments/assets/59f12939-e677-4bc7-9fd5-ed7a453fc768" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/e5a66caf-a7e3-4e0c-a26f-a9fdd72b3955" alt="Image 1" width="600"/></td>
+    <td><img src="https://github.com/user-attachments/assets/4830ffa2-6b5e-4bcf-8412-337cecdfbd7c" alt="Image 1" width="600"/></td>
   </tr>
 </table>
 
@@ -362,7 +363,7 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
 
 <table>
   <tr>
-    <th>MOTION_MODEL_VARIANCE=0.01</th>
+    <th>MOTION_MODEL_VARIANCE=0.05</th>
     <th>MOTION_MODEL_VARIANCE=0.1</th>
   </tr>
   <tr>
@@ -370,7 +371,7 @@ This study is done when the ```MEASUREMENT_MODEL_VARIANCE``` is kept fixed at th
     <td><img src="https://github.com/user-attachments/assets/6f72dbc0-3d3a-487f-8c37-8ef1e2abc143" alt="Image 1" width="600"/></td>
   </tr>
   <tr>
-    <th>MOTION_MODEL_VARIANCE=0.3</th>
+    <th>MOTION_MODEL_VARIANCE=0.7</th>
     <th>MOTION_MODEL_VARIANCE=1</th>
   </tr>
   <tr>
