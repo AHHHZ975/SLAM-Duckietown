@@ -244,6 +244,13 @@ By iteratively combining the predictive and corrective steps, the EKF ensures ac
 
 ## Benchmarking using Vicon system
 
+To benchmark our implementation, we compared the results of the SLAM prediction to ground truth data. The ground truth data was collected using a motion capture system (see [Vicon system](https://www.vicon.com/) for more information). This high-accuracy motion capture system can track objects at a millimeter precision, allowing us to have reliable ground truth data to compare our SLAM system to.
+
+The procedure to collect this data was as following:
+1. We prepared all landmarks and robot to have tracking balls on them
+2. We started a recording of the robot odometry and camera using [rosbag](https://wiki.ros.org/rosbag)
+3. At the same time, we start the recording of the motion capture system
+4. We collected all files (bags, csv from tracking) in the repository and synchronize them (see [decode_bag_file.py](https://github.com/AHHHZ975/SLAM-Duckietown/blob/main/scripts/decode_bag_file.py) for implementation). Timestemp on both recordings was used to synchronize them and the ground truth data was reajusted to the duckiebot position and angle frame.
 
 # Results
 
