@@ -21,8 +21,8 @@ import os
 import numpy as np
 from cv_bridge import CvBridge
 
-from solution.lane_filter import LaneFilterHistogram
-from solution.ekf_slam import (
+from include.lane_filter import LaneFilterHistogram
+from include.ekf_slam import (
     delta_phi,
     displacement,
     estimate_pose,
@@ -33,14 +33,14 @@ from solution.ekf_slam import (
 from dt_apriltags import Detector
 from collections import defaultdict
 
-from solution.ekf_slam import *
+from include.ekf_slam import *
 
 
-class HistogramLaneFilterNode(DTROS):
+class EKFSlamNode(DTROS):
     """Generates an estimate of the lane pose ... (docstring omitted for brevity)."""
 
     def __init__(self, node_name):
-        super(HistogramLaneFilterNode, self).__init__(
+        super(EKFSlamNode, self).__init__(
             node_name=node_name, node_type=NodeType.PERCEPTION
         )
 
@@ -146,16 +146,10 @@ class HistogramLaneFilterNode(DTROS):
         self.camera_info_received = True
 
     def cbProcessLeftEncoder(self, left_encoder_msg):
-        if not self.filter.initialized:
-            self.filter.encoder_resolution = left_encoder_msg.resolution
-            self.filter.initialized = True
         self.left_encoder_ticks_delta = left_encoder_msg.data - self.left_encoder_ticks
         self.last_encoder_stamp = left_encoder_msg.header.stamp
 
     def cbProcessRightEncoder(self, right_encoder_msg):
-        if not self.filter.initialized:
-            self.filter.encoder_resolution = right_encoder_msg.resolution
-            self.filter.initialized = True
         self.right_encoder_ticks_delta = (
             right_encoder_msg.data - self.right_encoder_ticks
         )
@@ -297,71 +291,6 @@ class HistogramLaneFilterNode(DTROS):
         )
         self.pub_projected_segments_img.publish(projected_segments_img)
 
-    def plot_path_opencv(self, vertices, sigma_x, sigma_y, tags):
-        """
-        Draws the robot's trajectory and tag detections on a blank image
-        and publishes it to the ~path_img topic.
-        """
-        # Create a blank white image
-        img_size = 600
-        img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
-
-        # scale/offset to map (x,y) onto image
-        scale = 100.0
-        offset_x = img_size // 2
-        offset_y = img_size // 2
-
-        def to_img_coords(x, y):
-            return int(offset_x + x * scale), int(offset_y - y * scale)
-
-        # Convert path vertices
-        pts = np.array([to_img_coords(x, y) for x, y in vertices], dtype=np.int32)
-
-        # Draw the path so far
-        if len(pts) > 1:
-            # Connect subsequent points with lines
-            for i in range(len(pts) - 1):
-                cv2.line(img, pts[i], pts[i + 1], (0, 0, 0), 2)
-
-        # Draw current pose covariance ellipse
-        if len(vertices) > 0:
-            (last_x, last_y) = vertices[-1]
-            ellipse_center = to_img_coords(last_x, last_y)
-            ellipse_axes = (
-                int(sigma_x * scale),
-                int(sigma_y * scale),
-            )
-            cv2.ellipse(img, ellipse_center, ellipse_axes, 0, 0, 360, (0, 0, 255), 2)
-
-        # Filter any duplicate tags
-        unique_tags = {}
-        for tag_id, tag_val in tags.items():
-            if tag_id not in unique_tags:
-                unique_tags[tag_id] = tag_val
-            else:
-                # If duplicates, average them
-                unique_tags[tag_id][0] = (unique_tags[tag_id][0] + tag_val[0]) / 2
-                unique_tags[tag_id][1] = (unique_tags[tag_id][1] + tag_val[1]) / 2
-
-        # Draw tags
-        for t_id, t_val in unique_tags.items():
-            tx, ty, err, original_id = t_val
-            pt = to_img_coords(tx, ty)
-            cv2.circle(img, pt, 5, (255, 0, 0), -1)
-            cv2.putText(
-                img,
-                str(original_id),
-                (pt[0] + 5, pt[1] - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 0, 0),
-                1,
-                cv2.LINE_AA,
-            )
-
-        # Publish as a ROS Image
-        img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
-        self.pub_path_img.publish(img_msg)
 
     def loginfo(self, s):
         rospy.loginfo("[%s] %s" % (self.node_name, s))
@@ -393,5 +322,5 @@ class HistogramLaneFilterNode(DTROS):
 
 
 if __name__ == "__main__":
-    lane_filter_node = HistogramLaneFilterNode(node_name="histogram_lane_filter_node")
+    lane_filter_node = EKFSlamNode(node_name="histogram_lane_filter_node")
     rospy.spin()
