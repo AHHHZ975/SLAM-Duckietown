@@ -14,18 +14,21 @@ from collections import defaultdict
 
 MOTION_MODEL_VARIANCE = 0.1
 MEASUREMENT_MODEL_VARIANCE = 0.7
-DELTA_TIME = 2 # second
+DELTA_TIME = 0.7 # second
 ENABLE_MEASUREMENT_MODEL = True
 ENABLE_CIRCULAR_INTERPOLATION = True
+
 # Be warned, this option gives unprivileged information to the ekf algorithmq
 # (a.k.a, the ekf algorithm is aware of the ground truth position of the tags)
 ENABLE_GOD_EKF = False
 # The 'secret key' is the correspondance between the tag numbers and the positions on the map
+
 GOD_SECRET_KEY = [80, 44, 41, 26, 110, 106, 101, 31, 65, 23, 232, 54]
+
 DISABLE_MOTION_MODEL = False # This option disables the motion model
 ENABLE_FAST_MODE = False # (may be less precise)
-ENABLE_CAMERA_VISUALIZATION = False # This makes the runtime so much faster, if you don't care about the 
-                                    # camera images and april tags bounding boxes visualization.
+ENABLE_CAMERA_VISUALIZATION = True # This makes the runtime so much faster, if you don't care about the 
+                                   # camera images and april tags bounding boxes visualization.
 
 
 
